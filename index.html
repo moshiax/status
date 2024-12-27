@@ -94,8 +94,6 @@ h1 {
 					const controller = new AbortController();
 					const signal = controller.signal;
 					const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
-
-					console.log(`Attempt ${attempts + 1}: Fetching URL via proxy: ${proxyUrl}`);
 					const startTime = performance.now();
 					const response = await fetch(proxyUrl, { signal });
 					const endTime = performance.now();
@@ -108,7 +106,6 @@ h1 {
 					}
 
 					const data = await response.text();
-					console.log(`Received response from proxy in ${duration}ms`);
 
 					const parser = new DOMParser();
 					const doc = parser.parseFromString(data, 'text/html');
@@ -138,9 +135,7 @@ h1 {
 							statusMessage += ` <br>[Last active: ${postDate.toISOString().slice(0, 19).replace('T', '')}]`;
 						}
 					}
-
-					console.log(`Final status for Minotaur: ${statusMessage} with color ${statusColor}`);
-
+					
 					return {
 						statusClass,
 						statusMessage,
