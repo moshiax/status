@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap">
+<style>
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #000000;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    background: #000000;
+    box-shadow: 0 0.2rem 1rem rgba(0, 0, 0, 0.7);
+    border-radius: 0.625rem;
+    width: 90%;
+    max-width: 50rem;
+    padding: 2.5rem;
+    text-align: center;
+}
+
+h1 {
+    font-size: 2rem; 
+    font-weight: 700;
+    color: #00e676;
+    margin-bottom: 1.25rem;
+}
+
+.status-card {
+    background-color: #000000;
+    border: 1px solid #333333;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 0.2rem 0.375rem rgba(0, 0, 0, 0.6);
+}
+
+.status {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: black;
+}
+
+.status-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.625rem;
+    color: black;
+}
+
+.status-footer {
+    margin-top: 0.625rem;
+    font-size: 0.875rem; 
+    color: #888;
+}
+
+.footer {
+    margin-top: 2.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: #666;
+}
+
+</style>
+
+</head>
+<body>
+<div class="container">
+    <div id="status-container"></div>
+    <div class="footer"></div>
+<script>
+
+	const statusModules = [
+		{
+			name: 'Minotaur',
+			checkStatus: async function () {
+				const url = 'https://api.cors.lol/?url=https://t.me/s/minotaurstats';
+				try {
+					const response = await fetch(url);
+					const data = await response.text();
+					const parser = new DOMParser();
+					const doc = parser.parseFromString(data, 'text/html');
+					const lastPost = doc.querySelectorAll('.tgme_widget_message');
+					const postText = lastPost[lastPost.length - 1].querySelector('.tgme_widget_message_text').innerText.trim();
+					const postDateString = lastPost[lastPost.length - 1].querySelector('time').getAttribute('datetime');
+					const postDate = new Date(postDateString.replace('Z', '+00:00'));
+					const currentTime = new Date();
+					const hoursDifference = Math.floor((currentTime - postDate) / 3600000);
+					const addedLine = postText.split('\n').find(line => line.includes("Added from last sync"));
+					const addedCount = addedLine ? parseInt(addedLine.match(/Added from last sync: (\d+)/)[1]) : 0;
+
+					let statusClass = 'active';
+					let statusMessage = 'ACTIVE';
+					let statusColor = '#00e676';
+
+					if (hoursDifference > 6 || addedCount === 0) {
+						statusClass = 'outage';
+						statusMessage = 'OUTAGE';
+						statusColor = '#ff0e00';
+						if (addedCount === 0) {
+							statusMessage += ', ADDED 0';
+						}
+						if (hoursDifference > 6) {
+							statusMessage += ` <br>[Last active: ${postDate.toISOString().slice(0, 19).replace('T', '')}]`;
+						}
+					}
+
+					return {
+						statusClass,
+						statusMessage,
+						statusColor
+					};
+				} catch (error) {
+					console.error('Error fetching data:', error);
+					return {
+						statusClass: 'outage',
+						statusMessage: 'Error fetching status',
+						statusColor: '#ff0e00'
+					};
+				}
+			}
+		},
+		{
+			name: 'Cock.li',
+			checkStatus: async function () {
+				const url = 'https://api.cors.lol/?url=https://cock.li';
+				try {
+					const response = await fetch(url);
+					const data = await response.text();
+					const parser = new DOMParser();
+					const doc = parser.parseFromString(data, 'text/html');
+					const alertText = doc.body.innerText;
+
+					let statusClass = 'active';
+					let statusMessage = 'Online';
+					let statusColor = '#00e676';
+
+					if (alertText.includes('RED ALERT')) {
+						statusClass = 'alert';
+						statusMessage = 'RED ALERT';
+						statusColor = '#ff0e00';
+					} else if (alertText.includes('ORANGE ALERT')) {
+						statusClass = 'warning';
+						statusMessage = 'ORANGE ALERT';
+						statusColor = '#ff6c00';
+					}
+
+					return {
+						statusClass,
+						statusMessage,
+						statusColor
+					};
+				} catch (error) {
+					console.error('Error fetching data:', error);
+					return {
+						statusClass: 'outage',
+						statusMessage: 'Error fetching status',
+						statusColor: '#ff0e00'
+					};
+				}
+			}
+		}
+	];
+
+	async function updateStatus() {
+		for (let module of statusModules) {
+			const { statusClass, statusMessage, statusColor } = await module.checkStatus();
+
+			const statusCard = document.getElementById(`status-${module.name}`);
+			const statusName = statusCard.querySelector('.status-name');
+			const statusText = statusCard.querySelector('.status');
+			const statusFooter = statusCard.querySelector('.status-footer');
+
+			statusName.style.color = statusColor;
+			statusText.style.color = statusColor;
+			statusText.innerHTML = statusMessage;
+			statusFooter.innerHTML = `Updated at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+		}
+	}
+
+	function createStatusCards() {
+		const statusContainer = document.getElementById('status-container');
+		for (let module of statusModules) {
+			const statusCard = document.createElement('div');
+			statusCard.id = `status-${module.name}`;
+			statusCard.classList.add('status-card');
+			statusCard.innerHTML = `
+				<div class="status-name">${module.name}</div>
+				<div class="status">
+					Loading...
+				</div>
+				<div class="status-footer">Loading...</div>
+			`;
+			statusContainer.appendChild(statusCard);
+		}
+	}
+
+	document.addEventListener('keydown', function(event) {
+		if (event.key === 'F5') { 
+			event.preventDefault();
+			updateStatus();
+		}
+	});
+
+	createStatusCards();
+	updateStatus();
+	setInterval(updateStatus, 60000);
+</script>
+
+</body>
+
+</html>
