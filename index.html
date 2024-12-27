@@ -78,81 +78,73 @@ h1 {
     <div id="status-container"></div>
     <div class="footer"></div>
 <script>
-	const statusModules = [
+const statusModules = [
 	{
 		name: 'Minotaur',
 		updateRate: 180,
 		checkStatus: async function () {
-			const url = 'https://t.me/s/minotaurstats';
-			const proxyUrl = `https://api.cors.lol/?url=${encodeURIComponent(url)}`;
-			let attempts = 0;
-			const maxAttempts = 1;
-			const timeoutDuration = 2222;
+			const timeoutDuration = 6666;
 
-			while (attempts < maxAttempts) {
-				try {
-					const controller = new AbortController();
-					const signal = controller.signal;
-					const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
-					const startTime = performance.now();
-					const response = await fetch(proxyUrl, { signal });
-					const endTime = performance.now();
-					const duration = (endTime - startTime).toFixed(2);
+			try {
+				const controller = new AbortController();
+				const signal = controller.signal;
+				const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
+				const startTime = performance.now();
 
-					clearTimeout(timeoutId);
+				const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://t.me/s/minotaurstats')}`, { signal });
+				const endTime = performance.now();
+				const duration = (endTime - startTime).toFixed(2);
 
-					if (!response.ok) {
-						throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
+				clearTimeout(timeoutId);
+
+				if (!response.ok) {
+					throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
+				}
+
+				const { contents } = await response.json();
+
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(contents, 'text/html');
+				const lastPost = doc.querySelectorAll('.tgme_widget_message');
+				const lastPostElement = lastPost[lastPost.length - 1];
+				const messageTextElement = lastPostElement.querySelector('.tgme_widget_message_text');
+				const postText = messageTextElement.innerText.trim();
+				const timeElement = lastPostElement.querySelector('time');
+				const postDateString = timeElement.getAttribute('datetime');
+				const postDate = new Date(postDateString.replace('Z', '+00:00'));
+				const currentTime = new Date();
+				const hoursDifference = Math.floor((currentTime - postDate) / 3600000);
+				const addedLine = postText.split('\n').find(line => line.includes("Added from last sync"));
+				const addedCount = addedLine ? parseInt(addedLine.match(/Added from last sync: (\d+)/)[1]) : 0;
+
+				let statusClass = 'active';
+				let statusMessage = 'ACTIVE';
+				let statusColor = '#00e676';
+
+				if (hoursDifference > 6 || addedCount === 0) {
+					statusClass = 'outage';
+					statusMessage = 'OUTAGE';
+					statusColor = '#ff0e00';
+					if (addedCount === 0) {
+						statusMessage += ', ADDED 0';
 					}
-
-					const data = await response.text();
-
-					const parser = new DOMParser();
-					const doc = parser.parseFromString(data, 'text/html');
-					const lastPost = doc.querySelectorAll('.tgme_widget_message');
-					const postText = lastPost[lastPost.length - 1].querySelector('.tgme_widget_message_text').innerText.trim();
-					const postDateString = lastPost[lastPost.length - 1].querySelector('time').getAttribute('datetime');
-
-					const postDate = new Date(postDateString.replace('Z', '+00:00'));
-					const currentTime = new Date();
-					const hoursDifference = Math.floor((currentTime - postDate) / 3600000);
-
-					const addedLine = postText.split('\n').find(line => line.includes("Added from last sync"));
-					const addedCount = addedLine ? parseInt(addedLine.match(/Added from last sync: (\d+)/)[1]) : 0;
-
-					let statusClass = 'active';
-					let statusMessage = 'ACTIVE';
-					let statusColor = '#00e676';
-
-					if (hoursDifference > 6 || addedCount === 0) {
-						statusClass = 'outage';
-						statusMessage = 'OUTAGE';
-						statusColor = '#ff0e00';
-						if (addedCount === 0) {
-							statusMessage += ', ADDED 0';
-						}
-						if (hoursDifference > 6) {
-							statusMessage += ` <br>[Last active: ${postDate.toISOString().slice(0, 19).replace('T', '')}]`;
-						}
-					}
-					
-					return {
-						statusClass,
-						statusMessage,
-						statusColor
-					};
-				} catch (error) {
-					attempts++;
-					console.error(`Error during fetch attempt ${attempts}:`, error);
-
-					if (attempts >= maxAttempts) {
-						return {
-							statusClass: 'outage',
-							statusMessage: 'Error fetching status',
-							statusColor: '#ff0e00'
-						};
+					if (hoursDifference > 6) {
+						statusMessage += ` <br>[Last active: ${postDate.toISOString().slice(0, 19).replace('T', '')}]`;
 					}
 				}
+
+				return {
+					statusClass,
+					statusMessage,
+					statusColor
+				};
+			} catch (error) {
+				console.error('Error during fetch:', error);
+				return {
+					statusClass: 'outage',
+					statusMessage: 'Error fetching status',
+					statusColor: '#ff0e00'
+				};
 			}
 		}
 	},
@@ -240,13 +232,8 @@ document.addEventListener('keydown', function(event) {
 });
 
 createStatusCards();
-updateStatusForAllModules();
-function updateStatusForAllModules() {
-    statusModules.forEach(module => {
-        updateStatus(module);
-    });
-}
 
+updateStatusForAllModules();
 function updateStatusForAllModules() {
     statusModules.forEach(module => {
         updateStatus(module);
