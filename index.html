@@ -79,20 +79,40 @@ h1 {
     <div class="footer"></div>
 <script>
 	const statusModules = [
-		{
-			name: 'Minotaur',
-			updateRate: 180,
-			checkStatus: async function () {
-				const url = 'https://t.me/s/minotaurstats';
+	{
+		name: 'Minotaur',
+		updateRate: 180,
+		checkStatus: async function () {
+			const url = 'https://t.me/s/minotaurstats';
+			const proxyUrl = `https://api.cors.lol/?url=${encodeURIComponent(url)}`;
+			let attempts = 0;
+			const maxAttempts = 1;
+			const timeoutDuration = 2222;
+
+			while (attempts < maxAttempts) {
 				try {
-					console.log(`Fetching data from URL: ${url}`); 
-					const response = await fetch(url);
+					const controller = new AbortController();
+					const signal = controller.signal;
+					const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
+
+					console.log(`Attempt ${attempts + 1}: Fetching URL via proxy: ${proxyUrl}`);
+					const startTime = performance.now();
+					const response = await fetch(proxyUrl, { signal });
+					const endTime = performance.now();
+					const duration = (endTime - startTime).toFixed(2);
+
+					clearTimeout(timeoutId);
+
+					if (!response.ok) {
+						throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
+					}
+
 					const data = await response.text();
+					console.log(`Received response from proxy in ${duration}ms`);
 
 					const parser = new DOMParser();
 					const doc = parser.parseFromString(data, 'text/html');
 					const lastPost = doc.querySelectorAll('.tgme_widget_message');
-
 					const postText = lastPost[lastPost.length - 1].querySelector('.tgme_widget_message_text').innerText.trim();
 					const postDateString = lastPost[lastPost.length - 1].querySelector('time').getAttribute('datetime');
 
@@ -119,7 +139,7 @@ h1 {
 						}
 					}
 
-					console.log(`Final status: ${statusMessage} with color ${statusColor}`); // Лог итогового статуса
+					console.log(`Final status for Minotaur: ${statusMessage} with color ${statusColor}`);
 
 					return {
 						statusClass,
@@ -127,15 +147,20 @@ h1 {
 						statusColor
 					};
 				} catch (error) {
-					console.error('Error fetching data:', error);
-					return {
-						statusClass: 'outage',
-						statusMessage: 'Error fetching status',
-						statusColor: '#ff0e00'
-					};
+					attempts++;
+					console.error(`Error during fetch attempt ${attempts}:`, error);
+
+					if (attempts >= maxAttempts) {
+						return {
+							statusClass: 'outage',
+							statusMessage: 'Error fetching status',
+							statusColor: '#ff0e00'
+						};
+					}
 				}
 			}
-		},
+		}
+	},
     {
         name: 'Cock.li',
         updateRate: 60, 
