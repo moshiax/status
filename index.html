@@ -78,23 +78,28 @@ h1 {
     <div id="status-container"></div>
     <div class="footer"></div>
 <script>
-
 	const statusModules = [
 		{
 			name: 'Minotaur',
+			updateRate: 180,
 			checkStatus: async function () {
-				const url = 'https://api.cors.lol/?url=https://t.me/s/minotaurstats';
+				const url = 'https://t.me/s/minotaurstats';
 				try {
+					console.log(`Fetching data from URL: ${url}`); 
 					const response = await fetch(url);
 					const data = await response.text();
+
 					const parser = new DOMParser();
 					const doc = parser.parseFromString(data, 'text/html');
 					const lastPost = doc.querySelectorAll('.tgme_widget_message');
+
 					const postText = lastPost[lastPost.length - 1].querySelector('.tgme_widget_message_text').innerText.trim();
 					const postDateString = lastPost[lastPost.length - 1].querySelector('time').getAttribute('datetime');
+
 					const postDate = new Date(postDateString.replace('Z', '+00:00'));
 					const currentTime = new Date();
 					const hoursDifference = Math.floor((currentTime - postDate) / 3600000);
+
 					const addedLine = postText.split('\n').find(line => line.includes("Added from last sync"));
 					const addedCount = addedLine ? parseInt(addedLine.match(/Added from last sync: (\d+)/)[1]) : 0;
 
@@ -114,6 +119,8 @@ h1 {
 						}
 					}
 
+					console.log(`Final status: ${statusMessage} with color ${statusColor}`); // Лог итогового статуса
+
 					return {
 						statusClass,
 						statusMessage,
@@ -129,91 +136,112 @@ h1 {
 				}
 			}
 		},
-		{
-			name: 'Cock.li',
-			checkStatus: async function () {
-				const url = 'https://api.cors.lol/?url=https://cock.li';
-				try {
-					const response = await fetch(url);
-					const data = await response.text();
-					const parser = new DOMParser();
-					const doc = parser.parseFromString(data, 'text/html');
-					const alertText = doc.body.innerText;
+    {
+        name: 'Cock.li',
+        updateRate: 60, 
+        checkStatus: async function () {
+            const url = 'https://api.cors.lol/?url=https://cock.li';
+            try {
+                const response = await fetch(url);
+                const data = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data, 'text/html');
+                const alertText = doc.body.innerText;
 
-					let statusClass = 'active';
-					let statusMessage = 'Online';
-					let statusColor = '#00e676';
+                let statusClass = 'active';
+                let statusMessage = 'Online';
+                let statusColor = '#00e676';
 
-					if (alertText.includes('RED ALERT')) {
-						statusClass = 'alert';
-						statusMessage = 'RED ALERT';
-						statusColor = '#ff0e00';
-					} else if (alertText.includes('ORANGE ALERT')) {
-						statusClass = 'warning';
-						statusMessage = 'ORANGE ALERT';
-						statusColor = '#ff6c00';
-					}
+                if (alertText.includes('RED ALERT')) {
+                    statusClass = 'alert';
+                    statusMessage = 'RED ALERT';
+                    statusColor = '#ff0e00';
+                } else if (alertText.includes('ORANGE ALERT')) {
+                    statusClass = 'warning';
+                    statusMessage = 'ORANGE ALERT';
+                    statusColor = '#ff6c00';
+                }
 
-					return {
-						statusClass,
-						statusMessage,
-						statusColor
-					};
-				} catch (error) {
-					console.error('Error fetching data:', error);
-					return {
-						statusClass: 'outage',
-						statusMessage: 'Error fetching status',
-						statusColor: '#ff0e00'
-					};
-				}
-			}
-		}
-	];
+                return {
+                    statusClass,
+                    statusMessage,
+                    statusColor
+                };
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                return {
+                    statusClass: 'outage',
+                    statusMessage: 'Error fetching status',
+                    statusColor: '#ff0e00'
+                };
+            }
+        }
+    }
+];
 
-	async function updateStatus() {
-		for (let module of statusModules) {
-			const { statusClass, statusMessage, statusColor } = await module.checkStatus();
+async function updateStatus(module) {
+    const { statusClass, statusMessage, statusColor } = await module.checkStatus();
+    const statusCard = document.getElementById(`status-${module.name}`);
+    const statusName = statusCard.querySelector('.status-name');
+    const statusText = statusCard.querySelector('.status');
+    const statusFooter = statusCard.querySelector('.status-footer');
+    statusName.style.color = statusColor;
+    statusText.style.color = statusColor;
+    statusText.innerHTML = statusMessage;
+    statusFooter.innerHTML = `Updated at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+    console.log(`Status for module: ${module.name} set to: ${statusMessage} with color: ${statusColor}`);
+}
 
-			const statusCard = document.getElementById(`status-${module.name}`);
-			const statusName = statusCard.querySelector('.status-name');
-			const statusText = statusCard.querySelector('.status');
-			const statusFooter = statusCard.querySelector('.status-footer');
+function createStatusCards() {
+    const statusContainer = document.getElementById('status-container');
+    for (let module of statusModules) {
+        const statusCard = document.createElement('div');
+        statusCard.id = `status-${module.name}`;
+        statusCard.classList.add('status-card');
+        statusCard.innerHTML = `
+            <div class="status-name">${module.name}</div>
+            <div class="status">
+                Loading...
+            </div>
+            <div class="status-footer">Loading...</div>
+        `;
+        statusContainer.appendChild(statusCard);
 
-			statusName.style.color = statusColor;
-			statusText.style.color = statusColor;
-			statusText.innerHTML = statusMessage;
-			statusFooter.innerHTML = `Updated at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
-		}
-	}
+        console.log(`Created status card for module: ${module.name}`);
+    }
+}
 
-	function createStatusCards() {
-		const statusContainer = document.getElementById('status-container');
-		for (let module of statusModules) {
-			const statusCard = document.createElement('div');
-			statusCard.id = `status-${module.name}`;
-			statusCard.classList.add('status-card');
-			statusCard.innerHTML = `
-				<div class="status-name">${module.name}</div>
-				<div class="status">
-					Loading...
-				</div>
-				<div class="status-footer">Loading...</div>
-			`;
-			statusContainer.appendChild(statusCard);
-		}
-	}
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'F5') { 
+        console.log('F5 pressed, updating status...');
+        event.preventDefault();
+        updateStatusForAllModules();
+    }
+});
 
-	document.addEventListener('keydown', function(event) {
-		if (event.key === 'F5') { 
-			event.preventDefault();
-			updateStatus();
-		}
-	});
+createStatusCards();
+updateStatusForAllModules();
+function updateStatusForAllModules() {
+    statusModules.forEach(module => {
+        updateStatus(module);
+    });
+}
 
-	createStatusCards();
-	updateStatus();
-	setInterval(updateStatus, 60000);
+function updateStatusForAllModules() {
+    statusModules.forEach(module => {
+        updateStatus(module);
+    });
+}
+
+statusModules.forEach(module => {
+    console.log(`Setting interval for module: ${module.name}, update rate: ${module.updateRate}s`);
+    setInterval(async () => {
+        await updateStatus(module);
+    }, module.updateRate * 1000);
+});
+
+
+
 </script>
 
 </body>
