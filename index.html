@@ -38,11 +38,10 @@
 			padding: 1.5rem;
 			margin-bottom: 1.25rem;
 			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-			transition: transform 0.2s ease, box-shadow 0.2s ease;
+			transition: box-shadow 0.2s ease;
 		}
 
 		.status-card:hover {
-			transform: translateY(-3px);
 			box-shadow: 0 6px 25px rgba(0, 0, 0, 0.6);
 		}
 
@@ -144,7 +143,7 @@
 				const card = document.getElementById(`status-${module.name}`);
 				card.querySelector('.status-name').className = 'status-name status-red';
 				card.querySelector('.status').className = 'status status-red';
-				card.querySelector('.status').innerHTML = `<a href="${module.url}" target="_blank" class="status-red" style="text-decoration:none;">Error fetching status</a>`;
+				card.querySelector('.status').innerHTML = `<a href="${module.url}" target="_blank" class="status-red" style="text-decoration:none;">Error: ${err.message}</a>`;
 				card.querySelector('.status-footer').textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 			}
 		}
