@@ -4,7 +4,6 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Status Monitor</title>
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap">
 	<style>
 		body {
 			font-family: 'Inter', sans-serif;
@@ -37,12 +36,6 @@
 			border-radius: 0.75rem;
 			padding: 1.5rem;
 			margin-bottom: 1.25rem;
-			box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-			transition: box-shadow 0.2s ease;
-		}
-
-		.status-card:hover {
-			box-shadow: 0 6px 25px rgba(0, 0, 0, 0.6);
 		}
 
 		.status-name {
@@ -71,16 +64,6 @@
 			color: #666;
 			margin-top: 2rem;
 		}
-
-		.status-green {
-			color: #00e676;
-		}
-		.status-red {
-			color: #ff0e00;
-		}
-		.status-orange {
-			color: #ff6c00;
-		}
 	</style>
 </head>
 <body>
@@ -92,60 +75,64 @@
 <script src="https://unpkg.com/openpgp@6.2.2/dist/openpgp.min.js"></script>
 <script>
 const statusModules = [
-  {
-    name: 'Cock.li',
-    url: 'https://cock.li',
-    updateRate: 60,
-    statusLogic: async (content) => {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(content, 'text/html');
-      const alertText = doc.body.innerText;
+	{
+		name: 'Cock.li',
+		url: 'https://cock.li',
+		updateRate: 60,
+		statusLogic: async () => {
+			const main = await proxyFetch("https://cock.li");
+			if (main.error) return { color: '#ff0e00', message: main.message };
 
-      let baseStatus;
-      if (alertText.includes('RED ALERT')) {
-        baseStatus = { class: 'status-red', message: 'RED ALERT' };
-      } else if (alertText.includes('ORANGE ALERT')) {
-        baseStatus = { class: 'status-orange', message: 'ORANGE ALERT' };
-      } else {
-        baseStatus = { class: 'status-green', message: 'Online' };
-      }
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(main.text, 'text/html');
+			const alertText = doc.body.innerText;
 
-      try {
-        const canaryResp = await fetch(
-          "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent("https://cock.li/canary.asc.txt")
-        );
-        const canaryText = await canaryResp.text();
+			let baseStatus = { color: '#00e676', message: 'Online' };
+			if (alertText.includes('RED ALERT')) baseStatus = { color: '#ff0e00', message: 'RED ALERT' };
+			else if (alertText.includes('ORANGE ALERT')) baseStatus = { color: '#ff6c00', message: 'ORANGE ALERT' };
 
-        const message = await openpgp.readCleartextMessage({ cleartextMessage: canaryText });
-        const publicKeyArmored = canaryText.match(/-----BEGIN PGP PUBLIC KEY BLOCK-----[^]+-----END PGP PUBLIC KEY BLOCK-----/)[0];
-        const publicKey = await openpgp.readKey({ armoredKey: publicKeyArmored });
-        const verificationResult = await openpgp.verify({
-          message,
-          verificationKeys: publicKey
-        });
-        const { verified, keyID } = verificationResult.signatures[0];
-        await verified; // throws if bad signature
+			const canary = await proxyFetch("https://cock.li/canary.asc.txt");
+			if (canary.error) return { color: '#ff0e00', message: canary.message };
 
-        const dateMatch = canaryText.match(/The current datetime:\s*(.+UTC)/);
-        if (!dateMatch) {
-          return { class: 'status-red', message: 'Canary: no datetime found' };
-        }
-        const canaryDate = new Date(dateMatch[1].replace(" UTC","Z"));
-        const now = new Date();
-        const diffHours = Math.abs(now - canaryDate) / (1000 * 60 * 60);
+			try {
+				const message = await openpgp.readCleartextMessage({ cleartextMessage: canary.text });
+				const publicKeyArmored = canary.text.match(/-----BEGIN PGP PUBLIC KEY BLOCK-----[^]+-----END PGP PUBLIC KEY BLOCK-----/)[0];
+				const publicKey = await openpgp.readKey({ armoredKey: publicKeyArmored });
+				const verificationResult = await openpgp.verify({ message, verificationKeys: publicKey });
+				const { verified } = verificationResult.signatures[0];
+				await verified;
+			} catch (err) {
+				return { color: '#ff0e00', message: `Canary PGP verification failed: ${err.message}` };
+			}
 
-        if (diffHours > 96) {
-          return { class: 'status-red', message: `Canary too old (>96h), last: ${canaryDate.toUTCString()}` };
-        }
+			const dateMatch = canary.text.match(/The current datetime:\s*(.+UTC)/);
+			if (!dateMatch) return { color: '#ff0e00', message: 'Canary: no datetime found' };
 
-        return baseStatus;
-      } catch (e) {
-        return { class: 'status-red', message: `Canary check failed: ${e.message}` };
-      }
-    }
-  }
+			const canaryDate = new Date(dateMatch[1].replace(" UTC","Z"));
+			const diffHours = Math.abs(new Date() - canaryDate) / (1000 * 60 * 60);
+			if (diffHours > 96) return { color: '#ff0e00', message: `Canary too old (>96h), last: ${canaryDate.toUTCString()}` };
+
+			return baseStatus;
+		}
+	}
 ];
 
+async function proxyFetch(url, timeout = 10000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
+    
+    try {
+        const resp = await fetch(proxyUrl, { signal: controller.signal });
+        clearTimeout(id);
+        if (!resp.ok) return { error: true, message: `HTTP ${resp.status}: ${resp.statusText}` };
+        const text = await resp.text();
+        return { error: false, text };
+    } catch (err) {
+        clearTimeout(id);
+        return { error: true, message: `Fetch failed: ${err.message}` };
+    }
+}
 
 function createStatusCards() {
 	const container = document.getElementById('status-container');
@@ -155,8 +142,8 @@ function createStatusCards() {
 		card.id = `status-${module.name}`;
 		card.className = 'status-card';
 		card.innerHTML = `
-			<a href="${module.url}" target="_blank" class="status-name status-green">${module.name}</a>
-			<div class="status status-green">Loading...</div>
+			<a href="${module.url || '#'}" target="_blank" class="status-name" style="color:#00e676;">${module.name}</a>
+			<div class="status" style="color:#00e676;">Loading...</div>
 			<div class="status-footer">Loading...</div>
 		`;
 		container.appendChild(card);
@@ -165,22 +152,18 @@ function createStatusCards() {
 
 async function updateStatus(module) {
 	try {
-		const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(module.url)}`;
-		const response = await fetch(proxyUrl);
-		const contents = await response.text();
-
-		const { class: statusClass, message } = await module.statusLogic(contents);
+		const { color, message } = await module.statusLogic();
 
 		const card = document.getElementById(`status-${module.name}`);
-		card.querySelector('.status-name').className = `status-name ${statusClass}`;
-		card.querySelector('.status').className = `status ${statusClass}`;
-		card.querySelector('.status').innerHTML = `<a href="${module.url}" target="_blank" class="${statusClass}" style="text-decoration:none;">${message}</a>`;
+		card.querySelector('.status-name').style.color = color;
+		card.querySelector('.status').style.color = color;
+		card.querySelector('.status').innerHTML = `<a href="${module.url || '#'}" target="_blank" style="color:${color};text-decoration:none;">${message}</a>`;
 		card.querySelector('.status-footer').textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 	} catch (err) {
 		const card = document.getElementById(`status-${module.name}`);
-		card.querySelector('.status-name').className = 'status-name status-red';
-		card.querySelector('.status').className = 'status status-red';
-		card.querySelector('.status').innerHTML = `<a href="${module.url}" target="_blank" class="status-red" style="text-decoration:none;">Error: ${err.message}</a>`;
+		card.querySelector('.status-name').style.color = '#ff0e00';
+		card.querySelector('.status').style.color = '#ff0e00';
+		card.querySelector('.status').innerHTML = `<a href="${module.url || '#'}" target="_blank" style="color:#ff0e00;text-decoration:none;">Error: ${err.message}</a>`;
 		card.querySelector('.status-footer').textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 	}
 }
