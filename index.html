@@ -84,86 +84,123 @@
 	</style>
 </head>
 <body>
-	<div class="container">
-		<div id="status-container"></div>
-		<div class="footer">Press F5 to refresh manually</div>
-	</div>
+<div class="container">
+	<div id="status-container"></div>
+	<div class="footer">Press F5 to refresh manually</div>
+</div>
 
-	<script>
-		const statusModules = [
-			{
-				name: 'Cock.li',
-				url: 'https://cock.li',
-				updateRate: 60,
-				statusLogic: async (content) => {
-					const parser = new DOMParser();
-					const doc = parser.parseFromString(content, 'text/html');
-					const alertText = doc.body.innerText;
+<script src="https://unpkg.com/openpgp@6.2.2/dist/openpgp.min.js"></script>
+<script>
+const statusModules = [
+  {
+    name: 'Cock.li',
+    url: 'https://cock.li',
+    updateRate: 60,
+    statusLogic: async (content) => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(content, 'text/html');
+      const alertText = doc.body.innerText;
 
-					if (alertText.includes('RED ALERT')) {
-						return { class: 'status-red', message: 'RED ALERT' };
-					} else if (alertText.includes('ORANGE ALERT')) {
-						return { class: 'status-orange', message: 'ORANGE ALERT' };
-					}
-					return { class: 'status-green', message: 'Online' };
-				}
-			}
-		];
+      let baseStatus;
+      if (alertText.includes('RED ALERT')) {
+        baseStatus = { class: 'status-red', message: 'RED ALERT' };
+      } else if (alertText.includes('ORANGE ALERT')) {
+        baseStatus = { class: 'status-orange', message: 'ORANGE ALERT' };
+      } else {
+        baseStatus = { class: 'status-green', message: 'Online' };
+      }
 
-		function createStatusCards() {
-			const container = document.getElementById('status-container');
-			container.innerHTML = '';
-			statusModules.forEach(module => {
-				const card = document.createElement('div');
-				card.id = `status-${module.name}`;
-				card.className = 'status-card';
-				card.innerHTML = `
-					<a href="${module.url}" target="_blank" class="status-name status-green">${module.name}</a>
-					<div class="status status-green">Loading...</div>
-					<div class="status-footer">Loading...</div>
-				`;
-				container.appendChild(card);
-			});
-		}
+      try {
+        const canaryResp = await fetch(
+          "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent("https://cock.li/canary.asc.txt")
+        );
+        const canaryText = await canaryResp.text();
 
-		async function updateStatus(module) {
-			try {
-				const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(module.url)}`;
-				const response = await fetch(proxyUrl);
-				const contents = await response.text();
+        const message = await openpgp.readCleartextMessage({ cleartextMessage: canaryText });
+        const publicKeyArmored = canaryText.match(/-----BEGIN PGP PUBLIC KEY BLOCK-----[^]+-----END PGP PUBLIC KEY BLOCK-----/)[0];
+        const publicKey = await openpgp.readKey({ armoredKey: publicKeyArmored });
+        const verificationResult = await openpgp.verify({
+          message,
+          verificationKeys: publicKey
+        });
+        const { verified, keyID } = verificationResult.signatures[0];
+        await verified; // throws if bad signature
 
-				const { class: statusClass, message } = await module.statusLogic(contents);
+        const dateMatch = canaryText.match(/The current datetime:\s*(.+UTC)/);
+        if (!dateMatch) {
+          return { class: 'status-red', message: 'Canary: no datetime found' };
+        }
+        const canaryDate = new Date(dateMatch[1].replace(" UTC","Z"));
+        const now = new Date();
+        const diffHours = Math.abs(now - canaryDate) / (1000 * 60 * 60);
 
-				const card = document.getElementById(`status-${module.name}`);
-				card.querySelector('.status-name').className = `status-name ${statusClass}`;
-				card.querySelector('.status').className = `status ${statusClass}`;
-				card.querySelector('.status').innerHTML = `<a href="${module.url}" target="_blank" class="${statusClass}" style="text-decoration:none;">${message}</a>`;
-				card.querySelector('.status-footer').textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-			} catch (err) {
-				const card = document.getElementById(`status-${module.name}`);
-				card.querySelector('.status-name').className = 'status-name status-red';
-				card.querySelector('.status').className = 'status status-red';
-				card.querySelector('.status').innerHTML = `<a href="${module.url}" target="_blank" class="status-red" style="text-decoration:none;">Error: ${err.message}</a>`;
-				card.querySelector('.status-footer').textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-			}
-		}
+        if (diffHours > 96) {
+          return { class: 'status-red', message: `Canary too old (>96h), last: ${canaryDate.toUTCString()}` };
+        }
 
-		function updateStatusForAllModules() {
-			statusModules.forEach(module => updateStatus(module));
-		}
+        return baseStatus;
+      } catch (e) {
+        return { class: 'status-red', message: `Canary check failed: ${e.message}` };
+      }
+    }
+  }
+];
 
-		document.addEventListener('keydown', e => {
-			if (e.key === 'F5') {
-				e.preventDefault();
-				updateStatusForAllModules();
-			}
-		});
 
-		createStatusCards();
+function createStatusCards() {
+	const container = document.getElementById('status-container');
+	container.innerHTML = '';
+	statusModules.forEach(module => {
+		const card = document.createElement('div');
+		card.id = `status-${module.name}`;
+		card.className = 'status-card';
+		card.innerHTML = `
+			<a href="${module.url}" target="_blank" class="status-name status-green">${module.name}</a>
+			<div class="status status-green">Loading...</div>
+			<div class="status-footer">Loading...</div>
+		`;
+		container.appendChild(card);
+	});
+}
+
+async function updateStatus(module) {
+	try {
+		const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(module.url)}`;
+		const response = await fetch(proxyUrl);
+		const contents = await response.text();
+
+		const { class: statusClass, message } = await module.statusLogic(contents);
+
+		const card = document.getElementById(`status-${module.name}`);
+		card.querySelector('.status-name').className = `status-name ${statusClass}`;
+		card.querySelector('.status').className = `status ${statusClass}`;
+		card.querySelector('.status').innerHTML = `<a href="${module.url}" target="_blank" class="${statusClass}" style="text-decoration:none;">${message}</a>`;
+		card.querySelector('.status-footer').textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+	} catch (err) {
+		const card = document.getElementById(`status-${module.name}`);
+		card.querySelector('.status-name').className = 'status-name status-red';
+		card.querySelector('.status').className = 'status status-red';
+		card.querySelector('.status').innerHTML = `<a href="${module.url}" target="_blank" class="status-red" style="text-decoration:none;">Error: ${err.message}</a>`;
+		card.querySelector('.status-footer').textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+	}
+}
+
+function updateStatusForAllModules() {
+	statusModules.forEach(module => updateStatus(module));
+}
+
+document.addEventListener('keydown', e => {
+	if (e.key === 'F5') {
+		e.preventDefault();
 		updateStatusForAllModules();
-		statusModules.forEach(module => {
-			setInterval(() => updateStatus(module), module.updateRate * 1000);
-		});
-	</script>
+	}
+});
+
+createStatusCards();
+updateStatusForAllModules();
+statusModules.forEach(module => {
+	setInterval(() => updateStatus(module), module.updateRate * 1000);
+});
+</script>
 </body>
 </html>
