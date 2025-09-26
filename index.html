@@ -69,7 +69,7 @@
 <body>
 <div class="container">
 	<div id="status-container"></div>
-	<div class="footer">Press F5 to refresh manually</div>
+	<div class="footer" id="refresh-footer"></div>
 </div>
 
 <script src="https://unpkg.com/openpgp@6.2.2/dist/openpgp.min.js"></script>
@@ -178,6 +178,15 @@ function updateStatusForAllModules() {
 	statusModules.forEach(module => updateStatus(module));
 }
 
+function setupFooter() {
+	const footer = document.getElementById('refresh-footer');
+	const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+	footer.textContent = isMobile ? 'Tap to refresh' : 'Press F5 to refresh';
+	footer.style.cursor = 'pointer';
+	footer.addEventListener('click', () => updateStatusForAllModules());
+}
+
+setupFooter();
 document.addEventListener('keydown', e => {
 	if (e.key === 'F5') {
 		e.preventDefault();
