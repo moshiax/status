@@ -118,20 +118,26 @@ const statusModules = [
 ];
 
 async function proxyFetch(url, timeout = 10000) {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
-    
-    try {
-        const resp = await fetch(proxyUrl, { signal: controller.signal });
-        clearTimeout(id);
-        if (!resp.ok) return { error: true, message: `HTTP ${resp.status}: ${resp.statusText}` };
-        const text = await resp.text();
-        return { error: false, text };
-    } catch (err) {
-        clearTimeout(id);
-        return { error: true, message: `Fetch failed: ${err.message}` };
+    const proxies = [
+        u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+        u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
+    ];
+
+    let lastError;
+    for (let getProxy of proxies) {
+        try {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            const resp = await fetch(getProxy(url), { signal: controller.signal });
+            clearTimeout(id);
+            if (resp.ok) return { error: false, text: await resp.text() };
+            lastError = `Fetch error: ${resp.status}`;
+        } catch (err) {
+            lastError = `Fetch error: ${err.message}`;
+        }
     }
+
+    return { error: true, message: lastError };
 }
 
 function createStatusCards() {
