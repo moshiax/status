@@ -473,14 +473,13 @@
 <script>
 const STORAGE_KEY = 'status-framework.modules.v1';
 const EXPORT_VERSION = 1;
-const DEFAULT_MODULE_CODE = `const response = await proxyFetch(module.url || 'https://example.com');
+const DEFAULT_MODULE_CODE = `const response = await fetch(module.url || 'https://jsonplaceholder.typicode.com/posts/1');
 if (response.error) {
 	return { color: '#ff0e00', message: response.message };
 }
 return {
 	color: '#00e676',
-	message: 'Online',
-	details: 'Fetched ' + response.text.length + ' characters.'
+	message: 'Online'
 };`;
 
 const defaultModules = [
@@ -636,8 +635,7 @@ function compileModule(module) {
 
 async function proxyFetch(url, timeout = 10000) {
 	const proxies = [
-		u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-		u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
+		u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`
 	];
 
 	let lastError;
@@ -789,8 +787,8 @@ async function updateStatus(moduleId) {
 	} catch (err) {
 		setModuleVisualState(module, {
 			color: '#ff0e00',
-			message: `Error: ${err.message}`,
-			details: 'Open the module editor to fix the JavaScript logic.'
+			message: 'Error',
+			details: err?.stack || err?.message || String(err)
 		});
 	}
 }
@@ -881,7 +879,7 @@ function saveModule(event) {
 	}
 	saveModules();
 	render();
-	openEditor(module.id);
+	closeEditor();
 	toast('Module saved to localStorage.');
 }
 
