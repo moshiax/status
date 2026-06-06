@@ -3,202 +3,1023 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Status Monitor</title>
+	<title>Status</title>
 	<style>
+		:root {
+			color-scheme: dark;
+			--bg: #0d0d0d;
+			--panel: #141414;
+			--panel-strong: #191919;
+			--border: #262626;
+			--muted: #aaa;
+			--muted-dark: #666;
+			--green: #00e676;
+			--red: #ff0e00;
+			--orange: #ff9f1a;
+			--blue: #66b3ff;
+			--shadow: 0 1.25rem 3.5rem rgb(0 0 0 / 35%);
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
 		body {
-			font-family: 'Inter', sans-serif;
-			background-color: #0d0d0d;
+			font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			background:
+				radial-gradient(circle at 20% 0%, rgb(0 230 118 / 10%), transparent 22rem),
+				radial-gradient(circle at 85% 15%, rgb(102 179 255 / 10%), transparent 26rem),
+				var(--bg);
 			color: #fff;
 			margin: 0;
-			padding: 0;
-			display: flex;
-			justify-content: center;
-			align-items: center;
+			padding: 2rem 1rem;
 			min-height: 100vh;
 		}
 
+		button,
+		input,
+		textarea {
+			font: inherit;
+		}
+
+		button {
+			border: 0;
+			cursor: pointer;
+		}
+
 		.container {
-			width: 90%;
-			max-width: 50rem;
+			width: min(76rem, 100%);
+			margin: 0 auto;
+		}
+
+		.hero {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			gap: 1.5rem;
+			align-items: end;
+			margin-bottom: 1.5rem;
 		}
 
 		h1 {
-			text-align: center;
-			font-size: 2rem;
-			font-weight: 700;
-			margin-bottom: 2rem;
-			color: #00e676;
+			font-size: clamp(2rem, 4vw, 4rem);
+			line-height: 0.95;
+			font-weight: 800;
+			letter-spacing: -0.07em;
+			margin: 0 0 0.75rem;
+			color: var(--green);
+		}
+
+		.toolbar,
+		.module-library,
+		.editor-panel,
+		.status-card {
+			background: rgb(20 20 20 / 88%);
+			border: 1px solid var(--border);
+			border-radius: 1rem;
+			box-shadow: var(--shadow);
+		}
+
+		.toolbar {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.75rem;
+			padding: 1rem;
+			margin-bottom: 1rem;
+		}
+
+		.btn {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 0.45rem;
+			min-height: 2.6rem;
+			padding: 0.65rem 1rem;
+			border-radius: 0.7rem;
+			background: #242424;
+			color: #fff;
+			transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+		}
+
+		.btn:hover {
+			background: #303030;
+			transform: translateY(-1px);
+		}
+
+		.btn.primary {
+			background: var(--green);
+			color: #001b0d;
+			font-weight: 800;
+		}
+
+		.btn.danger {
+			background: #361414;
+			color: #ffb2ad;
+		}
+
+		.btn.ghost {
+			background: transparent;
+			border: 1px solid var(--border);
+		}
+
+		.btn:disabled {
+			opacity: 0.55;
+			cursor: not-allowed;
+			transform: none;
+		}
+
+		.app-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) 24rem;
+			gap: 1rem;
+			align-items: start;
+		}
+
+		.status-grid {
+			display: grid;
+			gap: 1rem;
 		}
 
 		.status-card {
-			background: #141414;
-			border: 1px solid #222;
-			border-radius: 0.75rem;
-			padding: 1.5rem;
-			margin-bottom: 1.25rem;
+			padding: 1.25rem;
+			position: relative;
+			overflow: hidden;
+		}
+
+		.status-card::before {
+			content: "";
+			position: absolute;
+			inset: 0 auto 0 0;
+			width: 0.25rem;
+			background: var(--card-color, var(--green));
+		}
+
+		.status-card-header {
+			display: flex;
+			gap: 0.75rem;
+			align-items: flex-start;
+			justify-content: space-between;
 		}
 
 		.status-name {
-			font-size: 1.5rem;
-			font-weight: 700;
-			margin-bottom: 0.5rem;
+			font-size: 1.35rem;
+			font-weight: 800;
+			margin-bottom: 0.35rem;
 			display: inline-block;
 			text-decoration: none;
 			transition: color 0.3s ease;
 		}
 
 		.status {
-			font-size: 1.25rem;
-			font-weight: 500;
-			margin-bottom: 0.5rem;
+			font-size: 1.1rem;
+			font-weight: 650;
+			margin-bottom: 0.6rem;
+			line-height: 1.4;
+		}
+
+		.status-details {
+			color: var(--muted);
+			font-size: 0.94rem;
+			line-height: 1.5;
+			white-space: pre-wrap;
 		}
 
 		.status-footer {
-			font-size: 0.875rem;
-			color: #aaa;
+			display: flex;
+			gap: 0.5rem;
+			flex-wrap: wrap;
+			align-items: center;
+			font-size: 0.82rem;
+			color: var(--muted-dark);
+			margin-top: 0.9rem;
+		}
+
+		.pill {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.25rem;
+			border: 1px solid var(--border);
+			border-radius: 999px;
+			padding: 0.25rem 0.55rem;
+			background: #101010;
+		}
+
+		.card-actions,
+		.library-actions {
+			display: flex;
+			gap: 0.5rem;
+			flex-wrap: wrap;
+			justify-content: flex-end;
+		}
+
+		.icon-btn {
+			min-height: 2.15rem;
+			padding: 0.4rem 0.65rem;
+			border-radius: 0.55rem;
+			background: #202020;
+			color: #f5f5f5;
+		}
+
+		.icon-btn:hover {
+			background: #2c2c2c;
+		}
+
+		.sidebar {
+			display: grid;
+			gap: 1rem;
+			position: sticky;
+			top: 1rem;
+		}
+
+		.module-library,
+		.editor-panel {
+			padding: 1rem;
+		}
+
+		.panel-title {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1rem;
+			margin-bottom: 0.75rem;
+		}
+
+		.panel-title h2 {
+			font-size: 1rem;
+			margin: 0;
+			letter-spacing: 0.02em;
+			text-transform: uppercase;
+			color: #e8e8e8;
+		}
+
+		.module-list {
+			display: grid;
+			gap: 0.65rem;
+		}
+
+		.module-row {
+			display: grid;
+			gap: 0.4rem;
+			padding: 0.75rem;
+			border: 1px solid var(--border);
+			border-radius: 0.75rem;
+			background: #101010;
+		}
+
+		.module-row-title {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.75rem;
+			font-weight: 750;
+		}
+
+		.mini-meta {
+			font-size: 0.8rem;
+			color: var(--muted-dark);
+		}
+
+		.editor-panel {
+			display: none;
+		}
+
+		.editor-panel.open {
+			display: block;
+		}
+
+		.form-grid {
+			display: grid;
+			gap: 0.75rem;
+		}
+
+		label {
+			display: grid;
+			gap: 0.35rem;
+			font-size: 0.82rem;
+			font-weight: 700;
+			color: #d7d7d7;
+		}
+
+		input,
+		textarea {
+			width: 100%;
+			border: 1px solid var(--border);
+			border-radius: 0.65rem;
+			background: #0a0a0a;
+			color: #fff;
+			padding: 0.75rem;
+			outline: none;
+		}
+
+		input:focus,
+		textarea:focus {
+			border-color: rgb(0 230 118 / 70%);
+			box-shadow: 0 0 0 0.2rem rgb(0 230 118 / 12%);
+		}
+
+		textarea {
+			min-height: 23rem;
+			resize: vertical;
+			font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+			font-size: 0.86rem;
+			line-height: 1.5;
+			tab-size: 2;
+		}
+
+		.editor-actions {
+			display: flex;
+			gap: 0.65rem;
+			flex-wrap: wrap;
+			justify-content: flex-end;
+			margin-top: 0.9rem;
+		}
+
+		.help-box {
+			font-size: 0.85rem;
+			line-height: 1.5;
+			color: var(--muted);
+			background: #101010;
+			border: 1px solid var(--border);
+			border-radius: 0.75rem;
+			padding: 0.8rem;
+		}
+
+		.help-box code {
+			color: var(--green);
+		}
+
+		.toast {
+			position: fixed;
+			right: 1rem;
+			bottom: 1rem;
+			max-width: min(28rem, calc(100vw - 2rem));
+			padding: 0.85rem 1rem;
+			border-radius: 0.8rem;
+			background: #f7f7f7;
+			color: #0d0d0d;
+			font-weight: 750;
+			box-shadow: var(--shadow);
+			transform: translateY(130%);
+			opacity: 0;
+			transition: transform 0.2s ease, opacity 0.2s ease;
+			z-index: 10;
+		}
+
+		.toast.show {
+			transform: translateY(0);
+			opacity: 1;
+		}
+
+		.empty-state {
+			border: 1px dashed #333;
+			border-radius: 1rem;
+			padding: 2rem;
+			text-align: center;
+			color: var(--muted);
 		}
 
 		.footer {
 			text-align: center;
 			font-size: 0.875rem;
-			color: #666;
+			color: var(--muted-dark);
 			margin-top: 2rem;
+		}
+
+		.file-input {
+			display: none;
+		}
+
+		@media (max-width: 58rem) {
+			.hero,
+			.app-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.sidebar {
+				position: static;
+			}
 		}
 	</style>
 </head>
 <body>
 <div class="container">
-	<div id="status-container"></div>
-	<div class="footer" id="refresh-footer"></div>
+	<header class="hero">
+		<div>
+			<h1>Status</h1>
+		</div>
+		<button class="btn primary" id="add-module-button" type="button">+ Add module</button>
+	</header>
+
+	<nav class="toolbar" aria-label="сactions">
+		<button class="btn" id="refresh-all-button" type="button">Refresh all</button>
+		<button class="btn" id="export-all-button" type="button">Export all</button>
+		<button class="btn" id="import-button" type="button">Import JSON</button>
+		<button class="btn ghost" id="reset-button" type="button">Reset defaults</button>
+		<input class="file-input" id="import-file" type="file" accept="application/json,.json">
+	</nav>
+
+	<main class="app-grid">
+		<section>
+			<div class="status-grid" id="status-container"></div>
+			<div class="footer" id="refresh-footer"></div>
+		</section>
+
+		<aside class="sidebar">
+			<section class="module-library" aria-labelledby="library-title">
+				<div class="panel-title">
+					<h2 id="library-title">Modules</h2>
+					<span class="pill" id="module-count">0</span>
+				</div>
+				<div class="module-list" id="module-list"></div>
+			</section>
+
+			<section class="editor-panel" id="editor-panel" aria-labelledby="editor-title">
+				<div class="panel-title">
+					<h2 id="editor-title">Module editor</h2>
+					<button class="icon-btn" id="close-editor-button" type="button">Close</button>
+				</div>
+				<form class="form-grid" id="module-form">
+					<input id="module-id" type="hidden">
+					<label>
+						Name
+						<input id="module-name" required maxlength="80" placeholder="My service">
+					</label>
+					<label>
+						URL
+						<input id="module-url" type="url" placeholder="https://example.com">
+					</label>
+					<label>
+						Refresh rate, seconds
+						<input id="module-rate" type="number" min="5" step="1" required>
+					</label>
+					<label>
+						Status logic JavaScript
+						<textarea id="module-code" spellcheck="false" required></textarea>
+					</label>
+				</form>
+				<div class="help-box">
+					Module code must be an async function body or a function expression. Return <code>{ color, message, details }</code>. Helpers available: <code>proxyFetch</code>, <code>fetchText</code>, <code>jsonFetch</code>, <code>openpgp</code>. From code, call <code>StatusFramework.registerModule({ name, url, updateRate, code })</code> or pass a <code>statusLogic</code> function.
+				</div>
+				<div class="editor-actions">
+					<button class="btn" id="test-module-button" type="button">Test</button>
+					<button class="btn primary" id="save-module-button" type="submit" form="module-form">Save</button>
+				</div>
+			</section>
+		</aside>
+	</main>
 </div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://unpkg.com/openpgp@6.2.2/dist/openpgp.min.js"></script>
 <script>
-const statusModules = [
+const STORAGE_KEY = 'status-framework.modules.v1';
+const EXPORT_VERSION = 1;
+const DEFAULT_MODULE_CODE = `const response = await proxyFetch(module.url || 'https://example.com');
+if (response.error) {
+	return { color: '#ff0e00', message: response.message };
+}
+return {
+	color: '#00e676',
+	message: 'Online',
+	details: 'Fetched ' + response.text.length + ' characters.'
+};`;
+
+const defaultModules = [
 	{
+		id: 'cock-li',
 		name: 'Cock.li',
 		url: 'https://cock.li',
 		updateRate: 60,
-		statusLogic: async () => {
-			const main = await proxyFetch("https://cock.li");
-			if (main.error) return { color: '#ff0e00', message: main.message };
+		code: `const main = await proxyFetch('https://cock.li');
+if (main.error) return { color: '#ff0e00', message: main.message };
 
-			const parser = new DOMParser();
-			const doc = parser.parseFromString(main.text, 'text/html');
-			const alertText = doc.body.innerText;
+const parser = new DOMParser();
+const doc = parser.parseFromString(main.text, 'text/html');
+const alertText = doc.body.innerText;
 
-			let baseStatus = { color: '#00e676', message: 'Online' };
-			if (alertText.includes('RED ALERT')) baseStatus = { color: '#ff0e00', message: 'RED ALERT' };
-			else if (alertText.includes('ORANGE ALERT')) baseStatus = { color: '#ff6c00', message: 'ORANGE ALERT' };
+let baseStatus = { color: '#00e676', message: 'Online' };
+if (alertText.includes('RED ALERT')) baseStatus = { color: '#ff0e00', message: 'RED ALERT' };
+else if (alertText.includes('ORANGE ALERT')) baseStatus = { color: '#ff6c00', message: 'ORANGE ALERT' };
 
-			const canary = await proxyFetch("https://cock.li/canary.asc.txt");
-			if (canary.error) return { color: '#ff0e00', message: canary.message };
+const canary = await proxyFetch('https://cock.li/canary.asc.txt');
+if (canary.error) return { color: '#ff0e00', message: canary.message };
 
-			try {
-				const message = await openpgp.readCleartextMessage({ cleartextMessage: canary.text });
-				const publicKeyArmored = canary.text.match(/-----BEGIN PGP PUBLIC KEY BLOCK-----[^]+-----END PGP PUBLIC KEY BLOCK-----/)[0];
-				const publicKey = await openpgp.readKey({ armoredKey: publicKeyArmored });
-				const verificationResult = await openpgp.verify({ message, verificationKeys: publicKey });
-				const { verified } = verificationResult.signatures[0];
-				await verified;
-			} catch (err) {
-				return { color: '#ff0e00', message: `Canary PGP verification failed: ${err.message}` };
-			}
+try {
+	const message = await openpgp.readCleartextMessage({ cleartextMessage: canary.text });
+	const publicKeyArmored = canary.text.match(/-----BEGIN PGP PUBLIC KEY BLOCK-----[^]+-----END PGP PUBLIC KEY BLOCK-----/)[0];
+	const publicKey = await openpgp.readKey({ armoredKey: publicKeyArmored });
+	const verificationResult = await openpgp.verify({ message, verificationKeys: publicKey });
+	const { verified } = verificationResult.signatures[0];
+	await verified;
+} catch (err) {
+	return { color: '#ff0e00', message: 'Canary PGP verification failed: ' + err.message };
+}
 
-			const dateMatch = canary.text.match(/The current datetime:\s*(.+UTC)/);
-			if (!dateMatch) return { color: '#ff0e00', message: 'Canary: no datetime found' };
+const dateMatch = canary.text.match(/The current datetime:\\s*(.+UTC)/);
+if (!dateMatch) return { color: '#ff0e00', message: 'Canary: no datetime found' };
 
-			const canaryDate = new Date(dateMatch[1].replace(" UTC","Z"));
-			const diffHours = Math.abs(new Date() - canaryDate) / (1000 * 60 * 60);
-			if (diffHours > 96) return { color: '#ff0e00', message: `Canary too old (>96h), last: ${canaryDate.toUTCString()}` };
+const canaryDate = new Date(dateMatch[1].replace(' UTC', 'Z'));
+const diffHours = Math.abs(new Date() - canaryDate) / (1000 * 60 * 60);
+if (diffHours > 96) {
+	return {
+		color: '#ff0e00',
+		message: 'Canary too old (>96h)',
+		details: 'Last: ' + canaryDate.toUTCString()
+	};
+}
 
-			return baseStatus;
-		}
+return baseStatus;`
 	}
 ];
 
-async function proxyFetch(url, timeout = 10000) {
-    const proxies = [
-        u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-        u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
-    ];
+const state = {
+	modules: [],
+	timers: new Map(),
+	activeEditorId: null,
+	toastTimer: null
+};
 
-    let lastError;
-    for (let getProxy of proxies) {
-        try {
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), timeout);
-            const resp = await fetch(getProxy(url), { signal: controller.signal });
-            clearTimeout(id);
-            if (resp.ok) return { error: false, text: await resp.text() };
-            lastError = `Fetch error: ${resp.status}`;
-        } catch (err) {
-            lastError = `Fetch error: ${err.message}`;
-        }
-    }
+const elements = {
+	statusContainer: document.getElementById('status-container'),
+	moduleList: document.getElementById('module-list'),
+	moduleCount: document.getElementById('module-count'),
+	editor: document.getElementById('editor-panel'),
+	form: document.getElementById('module-form'),
+	id: document.getElementById('module-id'),
+	name: document.getElementById('module-name'),
+	url: document.getElementById('module-url'),
+	rate: document.getElementById('module-rate'),
+	code: document.getElementById('module-code'),
+	toast: document.getElementById('toast'),
+	importFile: document.getElementById('import-file'),
+	footer: document.getElementById('refresh-footer')
+};
 
-    return { error: true, message: lastError };
+const moduleApi = {
+	proxyFetch,
+	fetchText: async (url, timeout) => {
+		const response = await proxyFetch(url, timeout);
+		if (response.error) throw new Error(response.message);
+		return response.text;
+	},
+	jsonFetch: async (url, timeout) => JSON.parse(await moduleApi.fetchText(url, timeout)),
+	openpgp: window.openpgp,
+	colors: {
+		ok: '#00e676',
+		warning: '#ff9f1a',
+		error: '#ff0e00',
+		info: '#66b3ff'
+	}
+};
+
+function cloneModule(module) {
+	return {
+		id: module.id || createId(module.name),
+		name: module.name || 'Untitled module',
+		url: module.url || '',
+		updateRate: Math.max(5, Number(module.updateRate) || 60),
+		code: module.code || (typeof module.statusLogic === 'function' ? module.statusLogic.toString() : DEFAULT_MODULE_CODE)
+	};
 }
 
-function createStatusCards() {
-	const container = document.getElementById('status-container');
-	container.innerHTML = '';
-	statusModules.forEach(module => {
-		const card = document.createElement('div');
-		card.id = `status-${module.name}`;
-		card.className = 'status-card';
-		card.innerHTML = `
-			<a href="${module.url || '#'}" target="_blank" class="status-name" style="color:#00e676;">${module.name}</a>
-			<div class="status" style="color:#00e676;">Loading...</div>
-			<div class="status-footer">Loading...</div>
-		`;
-		container.appendChild(card);
-	});
-}
-
-async function updateStatus(module) {
+function loadModules() {
 	try {
-		const { color, message } = await module.statusLogic();
-
-		const card = document.getElementById(`status-${module.name}`);
-		card.querySelector('.status-name').style.color = color;
-		card.querySelector('.status').style.color = color;
-		card.querySelector('.status').innerHTML = `<a href="${module.url || '#'}" target="_blank" style="color:${color};text-decoration:none;">${message}</a>`;
-		card.querySelector('.status-footer').textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+		const raw = localStorage.getItem(STORAGE_KEY);
+		if (!raw) return defaultModules.map(cloneModule);
+		const parsed = JSON.parse(raw);
+		const importedModules = Array.isArray(parsed) ? parsed : parsed.modules;
+		if (!Array.isArray(importedModules)) throw new Error('Invalid module payload');
+		return importedModules.map(cloneModule);
 	} catch (err) {
-		const card = document.getElementById(`status-${module.name}`);
-		card.querySelector('.status-name').style.color = '#ff0e00';
-		card.querySelector('.status').style.color = '#ff0e00';
-		card.querySelector('.status').innerHTML = `<a href="${module.url || '#'}" target="_blank" style="color:#ff0e00;text-decoration:none;">Error: ${err.message}</a>`;
-		card.querySelector('.status-footer').textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+		console.warn('Failed to load modules, falling back to defaults:', err);
+		toast('Failed to load saved modules. Defaults restored.');
+		return defaultModules.map(cloneModule);
 	}
 }
 
+function saveModules() {
+	localStorage.setItem(STORAGE_KEY, JSON.stringify({
+		version: EXPORT_VERSION,
+		exportedAt: new Date().toISOString(),
+		modules: state.modules
+	}, null, 2));
+}
+
+function createId(name) {
+	const base = (name || 'module')
+		.toLowerCase()
+		.trim()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '') || 'module';
+	let id = base;
+	let index = 2;
+	while (state.modules.some(module => module.id === id)) {
+		id = `${base}-${index}`;
+		index += 1;
+	}
+	return id;
+}
+
+function compileModule(module) {
+	const source = module.code.trim();
+	const helpers = Object.keys(moduleApi);
+	const values = Object.values(moduleApi);
+	let factory;
+
+	if (/^(async\s+)?function\b|^async\s*\(/.test(source) || source.startsWith('(')) {
+		factory = new Function('module', ...helpers, `return (${source})(module, { ${helpers.join(', ')} });`);
+	} else {
+		factory = new Function('module', ...helpers, `return (async () => {\n${source}\n})();`);
+	}
+
+	return () => factory(module, ...values);
+}
+
+async function proxyFetch(url, timeout = 10000) {
+	const proxies = [
+		u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+		u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
+	];
+
+	let lastError;
+	for (const getProxy of proxies) {
+		try {
+			const controller = new AbortController();
+			const id = setTimeout(() => controller.abort(), timeout);
+			const resp = await fetch(getProxy(url), { signal: controller.signal });
+			clearTimeout(id);
+			if (resp.ok) return { error: false, text: await resp.text(), response: resp };
+			lastError = `Fetch error: ${resp.status}`;
+		} catch (err) {
+			lastError = `Fetch error: ${err.message}`;
+		}
+	}
+
+	return { error: true, message: lastError };
+}
+
+function render() {
+	renderStatusCards();
+	renderModuleList();
+	scheduleAllModules();
+	setupFooter();
+}
+
+function renderStatusCards() {
+	elements.statusContainer.textContent = '';
+
+	if (!state.modules.length) {
+		const empty = document.createElement('div');
+		empty.className = 'empty-state';
+		empty.textContent = 'No modules yet. Add one from the editor or import a JSON bundle.';
+		elements.statusContainer.appendChild(empty);
+		return;
+	}
+
+	state.modules.forEach(module => {
+		const card = document.createElement('article');
+		card.id = `status-${module.id}`;
+		card.className = 'status-card';
+		card.style.setProperty('--card-color', module.lastColor || '#00e676');
+
+		const header = document.createElement('div');
+		header.className = 'status-card-header';
+
+		const titleBlock = document.createElement('div');
+		const name = document.createElement('a');
+		name.href = module.url || '#';
+		name.target = '_blank';
+		name.rel = 'noopener noreferrer';
+		name.className = 'status-name';
+		name.style.color = module.lastColor || '#00e676';
+		name.textContent = module.name;
+		titleBlock.appendChild(name);
+
+		const status = document.createElement('div');
+		status.className = 'status';
+		status.style.color = module.lastColor || '#00e676';
+		status.textContent = module.lastMessage || 'Loading...';
+		titleBlock.appendChild(status);
+
+		const details = document.createElement('div');
+		details.className = 'status-details';
+		details.textContent = module.lastDetails || '';
+		titleBlock.appendChild(details);
+
+		const actions = document.createElement('div');
+		actions.className = 'card-actions';
+		actions.append(
+			button('Refresh', 'icon-btn', () => updateStatus(module.id)),
+			button('Edit', 'icon-btn', () => openEditor(module.id))
+		);
+
+		header.append(titleBlock, actions);
+
+		const footer = document.createElement('div');
+		footer.className = 'status-footer';
+		footer.append(
+			pill(`Every ${module.updateRate}s`),
+			pill(module.lastUpdated ? `Updated ${module.lastUpdated}` : 'Waiting for first run')
+		);
+
+		card.append(header, footer);
+		elements.statusContainer.appendChild(card);
+	});
+}
+
+function renderModuleList() {
+	elements.moduleCount.textContent = String(state.modules.length);
+	elements.moduleList.textContent = '';
+
+	state.modules.forEach(module => {
+		const row = document.createElement('div');
+		row.className = 'module-row';
+
+		const title = document.createElement('div');
+		title.className = 'module-row-title';
+		const name = document.createElement('span');
+		name.textContent = module.name;
+		const rate = document.createElement('span');
+		rate.className = 'mini-meta';
+		rate.textContent = `${module.updateRate}s`;
+		title.append(name, rate);
+
+		const meta = document.createElement('div');
+		meta.className = 'mini-meta';
+		meta.textContent = module.url || 'No URL configured';
+
+		const actions = document.createElement('div');
+		actions.className = 'library-actions';
+		actions.append(
+			button('Edit', 'icon-btn', () => openEditor(module.id)),
+			button('Export', 'icon-btn', () => exportModules([module])),
+			button('Delete', 'icon-btn', () => deleteModule(module.id))
+		);
+
+		row.append(title, meta, actions);
+		elements.moduleList.appendChild(row);
+	});
+}
+
+function button(label, className, onClick) {
+	const node = document.createElement('button');
+	node.type = 'button';
+	node.className = className;
+	node.textContent = label;
+	node.addEventListener('click', onClick);
+	return node;
+}
+
+function pill(text) {
+	const node = document.createElement('span');
+	node.className = 'pill';
+	node.textContent = text;
+	return node;
+}
+
+async function updateStatus(moduleId) {
+	const module = state.modules.find(item => item.id === moduleId);
+	if (!module) return;
+
+	setModuleVisualState(module, { color: '#66b3ff', message: 'Loading...', details: '' });
+
+	try {
+		const logic = compileModule(module);
+		const result = await logic();
+		setModuleVisualState(module, normalizeStatus(result));
+	} catch (err) {
+		setModuleVisualState(module, {
+			color: '#ff0e00',
+			message: `Error: ${err.message}`,
+			details: 'Open the module editor to fix the JavaScript logic.'
+		});
+	}
+}
+
+function normalizeStatus(result) {
+	if (typeof result === 'string') {
+		return { color: '#00e676', message: result, details: '' };
+	}
+	return {
+		color: result?.color || '#00e676',
+		message: result?.message || 'Online',
+		details: result?.details || ''
+	};
+}
+
+function setModuleVisualState(module, status) {
+	module.lastColor = status.color;
+	module.lastMessage = status.message;
+	module.lastDetails = status.details;
+	module.lastUpdated = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+	updateCard(module);
+}
+
+function updateCard(module) {
+	const card = document.getElementById(`status-${module.id}`);
+	if (!card) return;
+	card.style.setProperty('--card-color', module.lastColor || '#00e676');
+	card.querySelector('.status-name').style.color = module.lastColor || '#00e676';
+	card.querySelector('.status').style.color = module.lastColor || '#00e676';
+	card.querySelector('.status').textContent = module.lastMessage || 'Loading...';
+	card.querySelector('.status-details').textContent = module.lastDetails || '';
+	const footer = card.querySelector('.status-footer');
+	footer.textContent = '';
+	footer.append(pill(`Every ${module.updateRate}s`), pill(module.lastUpdated ? `Updated ${module.lastUpdated}` : 'Waiting for first run'));
+}
+
 function updateStatusForAllModules() {
-	statusModules.forEach(module => updateStatus(module));
+	state.modules.forEach(module => updateStatus(module.id));
+}
+
+function scheduleAllModules() {
+	state.timers.forEach(timer => clearInterval(timer));
+	state.timers.clear();
+	state.modules.forEach(module => {
+		updateStatus(module.id);
+		state.timers.set(module.id, setInterval(() => updateStatus(module.id), module.updateRate * 1000));
+	});
+}
+
+function openEditor(moduleId = null) {
+	const module = moduleId ? state.modules.find(item => item.id === moduleId) : null;
+	state.activeEditorId = module?.id || null;
+	elements.id.value = module?.id || '';
+	elements.name.value = module?.name || '';
+	elements.url.value = module?.url || '';
+	elements.rate.value = module?.updateRate || 60;
+	elements.code.value = module?.code || DEFAULT_MODULE_CODE;
+	elements.editor.classList.add('open');
+	elements.name.focus();
+}
+
+function closeEditor() {
+	state.activeEditorId = null;
+	elements.editor.classList.remove('open');
+	elements.form.reset();
+}
+
+function getFormModule() {
+	const currentId = elements.id.value;
+	const name = elements.name.value.trim();
+	return {
+		id: currentId || createId(name),
+		name,
+		url: elements.url.value.trim(),
+		updateRate: Math.max(5, Number(elements.rate.value) || 60),
+		code: elements.code.value.trim()
+	};
+}
+
+function saveModule(event) {
+	event.preventDefault();
+	const module = getFormModule();
+	const existingIndex = state.modules.findIndex(item => item.id === module.id);
+	if (existingIndex >= 0) {
+		state.modules[existingIndex] = { ...state.modules[existingIndex], ...module };
+	} else {
+		state.modules.push(module);
+	}
+	saveModules();
+	render();
+	openEditor(module.id);
+	toast('Module saved to localStorage.');
+}
+
+async function testCurrentModule() {
+	const module = getFormModule();
+	try {
+		const result = await compileModule(module)();
+		const status = normalizeStatus(result);
+		toast(`Test passed: ${status.message}`);
+	} catch (err) {
+		toast(`Test failed: ${err.message}`);
+	}
+}
+
+function deleteModule(moduleId) {
+	const module = state.modules.find(item => item.id === moduleId);
+	if (!module) return;
+	if (!confirm(`Delete module "${module.name}"?`)) return;
+	state.modules = state.modules.filter(item => item.id !== moduleId);
+	if (state.timers.has(moduleId)) clearInterval(state.timers.get(moduleId));
+	state.timers.delete(moduleId);
+	if (state.activeEditorId === moduleId) closeEditor();
+	saveModules();
+	render();
+	toast('Module deleted.');
+}
+
+function exportModules(modules) {
+	const payload = {
+		version: EXPORT_VERSION,
+		exportedAt: new Date().toISOString(),
+		modules: modules.map(cloneModule)
+	};
+	const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+	const url = URL.createObjectURL(blob);
+	const anchor = document.createElement('a');
+	anchor.href = url;
+	anchor.download = modules.length === 1 ? `${modules[0].id}.status-module.json` : 'status-modules.json';
+	anchor.click();
+	URL.revokeObjectURL(url);
+	toast('Export started.');
+}
+
+function importModulesFromText(text) {
+	const payload = JSON.parse(text);
+	const incoming = Array.isArray(payload) ? payload : payload.modules;
+	if (!Array.isArray(incoming)) throw new Error('JSON must contain a modules array.');
+
+	incoming.map(cloneModule).forEach(module => {
+		const existingIndex = state.modules.findIndex(item => item.id === module.id);
+		if (existingIndex >= 0) state.modules[existingIndex] = module;
+		else state.modules.push(module);
+	});
+
+	saveModules();
+	render();
+	toast(`Imported ${incoming.length} module(s).`);
+}
+
+function resetDefaults() {
+	if (!confirm('Reset all modules to defaults? Custom modules in localStorage will be overwritten.')) return;
+	state.modules = defaultModules.map(cloneModule);
+	saveModules();
+	closeEditor();
+	render();
+	toast('Default modules restored.');
 }
 
 function setupFooter() {
-	const footer = document.getElementById('refresh-footer');
 	const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-	footer.textContent = isMobile ? 'Tap to refresh' : 'Press F5 to refresh';
-	footer.style.cursor = 'pointer';
-	footer.addEventListener('click', () => updateStatusForAllModules());
+	elements.footer.textContent = isMobile ? 'Tap to refresh all modules' : 'Press F5 or click here to refresh all modules';
+	elements.footer.style.cursor = 'pointer';
 }
 
-setupFooter();
+function toast(message) {
+	clearTimeout(state.toastTimer);
+	elements.toast.textContent = message;
+	elements.toast.classList.add('show');
+	state.toastTimer = setTimeout(() => elements.toast.classList.remove('show'), 3200);
+}
+
+function registerModule(module) {
+	const normalized = cloneModule(module);
+	const existingIndex = state.modules.findIndex(item => item.id === normalized.id);
+	if (existingIndex >= 0) state.modules[existingIndex] = normalized;
+	else state.modules.push(normalized);
+	saveModules();
+	render();
+	return normalized;
+}
+
+function registerModules(modules) {
+	return modules.map(registerModule);
+}
+
+window.StatusFramework = {
+	registerModule,
+	registerModules,
+	getModules: () => state.modules.map(cloneModule),
+	exportModules: () => exportModules(state.modules),
+	refresh: updateStatusForAllModules,
+	helpers: moduleApi
+};
+
+document.getElementById('add-module-button').addEventListener('click', () => openEditor());
+document.getElementById('refresh-all-button').addEventListener('click', updateStatusForAllModules);
+document.getElementById('export-all-button').addEventListener('click', () => exportModules(state.modules));
+document.getElementById('import-button').addEventListener('click', () => elements.importFile.click());
+document.getElementById('reset-button').addEventListener('click', resetDefaults);
+document.getElementById('close-editor-button').addEventListener('click', closeEditor);
+document.getElementById('test-module-button').addEventListener('click', testCurrentModule);
+elements.form.addEventListener('submit', saveModule);
+elements.footer.addEventListener('click', updateStatusForAllModules);
+elements.importFile.addEventListener('change', async event => {
+	const [file] = event.target.files;
+	if (!file) return;
+	try {
+		importModulesFromText(await file.text());
+	} catch (err) {
+		toast(`Import failed: ${err.message}`);
+	} finally {
+		elements.importFile.value = '';
+	}
+});
+
 document.addEventListener('keydown', e => {
 	if (e.key === 'F5') {
 		e.preventDefault();
 		updateStatusForAllModules();
 	}
+	if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && elements.editor.classList.contains('open')) {
+		e.preventDefault();
+		elements.form.requestSubmit();
+	}
 });
 
-createStatusCards();
-updateStatusForAllModules();
-statusModules.forEach(module => {
-	setInterval(() => updateStatus(module), module.updateRate * 1000);
-});
+state.modules = loadModules();
+render();
 </script>
 </body>
 </html>
