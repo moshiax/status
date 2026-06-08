@@ -70,7 +70,6 @@
 		}
 
 		.toolbar,
-		.module-library,
 		.editor-panel,
 		.status-card {
 			background: rgb(20 20 20 / 88%);
@@ -129,7 +128,7 @@
 
 		.app-grid {
 			display: grid;
-			grid-template-columns: minmax(0, 1fr) 24rem;
+			grid-template-columns: minmax(0, 1fr) 28rem;
 			gap: 1rem;
 			align-items: start;
 		}
@@ -197,14 +196,44 @@
 			display: inline-flex;
 			align-items: center;
 			gap: 0.25rem;
-			border: 1px solid var(--border);
+			border: 1px solid var(--pill-border, var(--border));
 			border-radius: 999px;
 			padding: 0.25rem 0.55rem;
 			background: #101010;
+			position: relative;
+			overflow: hidden;
 		}
 
-		.card-actions,
-		.library-actions {
+		.pill-content {
+			position: relative;
+			z-index: 1;
+		}
+
+		.pill.progress-pill {
+			--pill-progress-position: 100%;
+			--pill-color: var(--green);
+			--pill-color-end: var(--pill-color);
+			--pill-empty-color: var(--border);
+			border-color: transparent;
+			background:
+				linear-gradient(#101010, #101010) padding-box,
+				linear-gradient(
+					90deg,
+					var(--pill-color) 0%,
+					var(--pill-color-end) 50%,
+					var(--pill-empty-color) 50%,
+					var(--pill-empty-color) 100%
+				) border-box;
+			background-repeat: no-repeat;
+			background-size: 100% 100%, 200% 100%;
+			background-position: 0 0, var(--pill-progress-position) 0;
+			will-change: background-position;
+		}
+		.pill-progress-fill {
+			transform-origin: left;
+			will-change: transform;
+		}
+		.card-actions {
 			display: flex;
 			gap: 0.5rem;
 			flex-wrap: wrap;
@@ -230,7 +259,6 @@
 			top: 1rem;
 		}
 
-		.module-library,
 		.editor-panel {
 			padding: 1rem;
 		}
@@ -249,33 +277,6 @@
 			letter-spacing: 0.02em;
 			text-transform: uppercase;
 			color: #e8e8e8;
-		}
-
-		.module-list {
-			display: grid;
-			gap: 0.65rem;
-		}
-
-		.module-row {
-			display: grid;
-			gap: 0.4rem;
-			padding: 0.75rem;
-			border: 1px solid var(--border);
-			border-radius: 0.75rem;
-			background: #101010;
-		}
-
-		.module-row-title {
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			gap: 0.75rem;
-			font-weight: 750;
-		}
-
-		.mini-meta {
-			font-size: 0.8rem;
-			color: var(--muted-dark);
 		}
 
 		.editor-panel {
@@ -324,6 +325,63 @@
 			line-height: 1.5;
 			tab-size: 2;
 		}
+
+		.code-editor {
+			position: relative;
+			min-height: 23rem;
+			border: 1px solid var(--border);
+			border-radius: 0.65rem;
+			background: #0a0a0a;
+			overflow: hidden;
+		}
+
+		.code-editor:focus-within {
+			border-color: rgb(0 230 118 / 70%);
+			box-shadow: 0 0 0 0.2rem rgb(0 230 118 / 12%);
+		}
+
+		.code-highlight,
+		.code-editor textarea {
+			min-height: 23rem;
+			margin: 0;
+			border: 0;
+			border-radius: 0;
+			padding: 0.75rem;
+			font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+			font-size: 0.86rem;
+			line-height: 1.5;
+			tab-size: 2;
+			white-space: pre;
+			overflow: auto;
+		}
+
+		.code-highlight {
+			position: absolute;
+			inset: 0;
+			pointer-events: none;
+			color: #e6edf3;
+		}
+
+		.code-editor textarea {
+			position: relative;
+			background: transparent;
+			color: transparent;
+			caret-color: #fff;
+			resize: vertical;
+			z-index: 1;
+		}
+
+		.code-editor textarea::selection {
+			background: rgb(102 179 255 / 35%);
+			color: transparent;
+		}
+
+		.code-token.keyword { color: #ff7b72; }
+		.code-token.string { color: #a5d6ff; }
+		.code-token.number { color: #79c0ff; }
+		.code-token.comment { color: #8b949e; }
+		.code-token.literal { color: #d2a8ff; }
+		.code-token.property { color: #7ee787; }
 
 		.editor-actions {
 			display: flex;
@@ -424,14 +482,6 @@
 		</section>
 
 		<aside class="sidebar">
-			<section class="module-library" aria-labelledby="library-title">
-				<div class="panel-title">
-					<h2 id="library-title">Modules</h2>
-					<span class="pill" id="module-count">0</span>
-				</div>
-				<div class="module-list" id="module-list"></div>
-			</section>
-
 			<section class="editor-panel" id="editor-panel" aria-labelledby="editor-title">
 				<div class="panel-title">
 					<h2 id="editor-title">Module editor</h2>
@@ -444,20 +494,15 @@
 						<input id="module-name" required maxlength="80" placeholder="My service">
 					</label>
 					<label>
-						URL
-						<input id="module-url" type="url" placeholder="https://example.com">
-					</label>
-					<label>
-						Refresh rate, seconds
-						<input id="module-rate" type="number" min="5" step="1" required>
-					</label>
-					<label>
 						Status logic JavaScript
-						<textarea id="module-code" spellcheck="false" required></textarea>
+						<div class="code-editor">
+							<pre class="code-highlight" id="module-code-highlight" aria-hidden="true"></pre>
+							<textarea id="module-code" spellcheck="false" required></textarea>
+						</div>
 					</label>
 				</form>
 				<div class="help-box">
-					Module code must be an async function body or a function expression. Return <code>{ color, message, details }</code>. Helpers available: <code>proxyFetch</code>, <code>fetchText</code>, <code>jsonFetch</code>, <code>openpgp</code>. From code, call <code>StatusFramework.registerModule({ name, url, updateRate, code })</code> or pass a <code>statusLogic</code> function.
+					Module code must be an async function body or a function expression. Return <code>{ color, message, details, pills }</code>. Put URL, refresh timing, and pill choices in JavaScript with <code>setModuleConfig({ url, updateRate })</code> and local template imports like <code>const { refreshTimer, lastUpdated } = pills</code>. If a module does not return <code>pills</code>, no pills are rendered.
 				</div>
 				<div class="editor-actions">
 					<button class="btn" id="test-module-button" type="button">Test</button>
@@ -473,23 +518,40 @@
 <script>
 const STORAGE_KEY = 'status-framework.modules.v1';
 const EXPORT_VERSION = 1;
-const DEFAULT_MODULE_CODE = `const response = await fetch(module.url || 'https://jsonplaceholder.typicode.com/posts/1');
+const DEFAULT_MODULE_CODE = `setModuleConfig({
+	url: 'https://jsonplaceholder.typicode.com/posts/1',
+	updateRate: 60
+});
+
+const { refreshTimer, lastUpdated } = pills;
+const response = await proxyFetch(module.url);
 if (response.error) {
-	return { color: '#ff0e00', message: response.message };
+	return {
+		color: colors.error,
+		message: response.message,
+		pills: [refreshTimer({ module }), lastUpdated({ module })]
+	};
 }
+
 return {
-	color: '#00e676',
-	message: 'Online'
+	color: colors.ok,
+	message: 'Online',
+	pills: [refreshTimer({ module }), lastUpdated({ module })]
 };`;
 
 const defaultModules = [
 	{
 		id: 'cock-li',
 		name: 'Cock.li',
-		url: 'https://cock.li',
-		updateRate: 60,
-		code: `const main = await proxyFetch('https://cock.li');
-if (main.error) return { color: '#ff0e00', message: main.message };
+		code: `setModuleConfig({
+	url: 'https://cock.li',
+	updateRate: 60
+});
+
+const { refreshTimer, lastUpdated } = pills;
+const main = await proxyFetch(module.url);
+const statusPills = () => [refreshTimer({ module }), lastUpdated({ module })];
+if (main.error) return { color: '#ff0e00', message: main.message, pills: statusPills() };
 
 const parser = new DOMParser();
 const doc = parser.parseFromString(main.text, 'text/html');
@@ -500,7 +562,7 @@ if (alertText.includes('RED ALERT')) baseStatus = { color: '#ff0e00', message: '
 else if (alertText.includes('ORANGE ALERT')) baseStatus = { color: '#ff6c00', message: 'ORANGE ALERT' };
 
 const canary = await proxyFetch('https://cock.li/canary.asc.txt');
-if (canary.error) return { color: '#ff0e00', message: canary.message };
+if (canary.error) return { color: '#ff0e00', message: canary.message, pills: statusPills() };
 
 try {
 	const message = await openpgp.readCleartextMessage({ cleartextMessage: canary.text });
@@ -510,11 +572,11 @@ try {
 	const { verified } = verificationResult.signatures[0];
 	await verified;
 } catch (err) {
-	return { color: '#ff0e00', message: 'Canary PGP verification failed: ' + err.message };
+	return { color: '#ff0e00', message: 'Canary PGP verification failed: ' + err.message, pills: statusPills() };
 }
 
 const dateMatch = canary.text.match(/The current datetime:\\s*(.+UTC)/);
-if (!dateMatch) return { color: '#ff0e00', message: 'Canary: no datetime found' };
+if (!dateMatch) return { color: '#ff0e00', message: 'Canary: no datetime found', pills: statusPills() };
 
 const canaryDate = new Date(dateMatch[1].replace(' UTC', 'Z'));
 const diffHours = Math.abs(new Date() - canaryDate) / (1000 * 60 * 60);
@@ -522,11 +584,12 @@ if (diffHours > 96) {
 	return {
 		color: '#ff0e00',
 		message: 'Canary too old (>96h)',
-		details: 'Last: ' + canaryDate.toUTCString()
+		details: 'Last: ' + canaryDate.toUTCString(),
+		pills: statusPills()
 	};
 }
 
-return baseStatus;`
+return { ...baseStatus, pills: statusPills() };`
 	}
 ];
 
@@ -537,20 +600,41 @@ const state = {
 	toastTimer: null
 };
 
+
+const pillTemplates = {
+	refreshTimer: ({
+		module = {},
+		label = `Every ${module.updateRate || 60}s`,
+		color = module.lastColor || '#00e676',
+		colorEnd = color,
+		emptyColor
+	} = {}) => ({
+		id: 'refresh-timer',
+		text: label,
+		kind: 'refresh-timer',
+		period: Math.max(5, Number(module.updateRate) || 60),
+		color,
+		colorEnd,
+		emptyColor
+	}),
+	lastUpdated: ({ module = {}, emptyText = 'Waiting for first run' } = {}) => ({
+		id: 'last-updated',
+		text: module.lastUpdated ? `Updated ${module.lastUpdated}` : emptyText
+	}),
+	text: (text, options = {}) => ({ ...options, text })
+};
+
 const elements = {
 	statusContainer: document.getElementById('status-container'),
-	moduleList: document.getElementById('module-list'),
-	moduleCount: document.getElementById('module-count'),
 	editor: document.getElementById('editor-panel'),
 	form: document.getElementById('module-form'),
 	id: document.getElementById('module-id'),
 	name: document.getElementById('module-name'),
-	url: document.getElementById('module-url'),
-	rate: document.getElementById('module-rate'),
 	code: document.getElementById('module-code'),
 	toast: document.getElementById('toast'),
 	importFile: document.getElementById('import-file'),
-	footer: document.getElementById('refresh-footer')
+	footer: document.getElementById('refresh-footer'),
+	codeHighlight: document.getElementById('module-code-highlight')
 };
 
 const moduleApi = {
@@ -567,7 +651,8 @@ const moduleApi = {
 		warning: '#ff9f1a',
 		error: '#ff0e00',
 		info: '#66b3ff'
-	}
+	},
+	pills: pillTemplates
 };
 
 function cloneModule(module) {
@@ -599,7 +684,7 @@ function saveModules() {
 	localStorage.setItem(STORAGE_KEY, JSON.stringify({
 		version: EXPORT_VERSION,
 		exportedAt: new Date().toISOString(),
-		modules: state.modules
+		modules: state.modules.map(cloneModule)
 	}, null, 2));
 }
 
@@ -618,13 +703,27 @@ function createId(name) {
 	return id;
 }
 
+
+function applyModuleConfig(module, config = {}) {
+	if (!config || typeof config !== 'object') return module;
+	if (typeof config.name === 'string' && config.name.trim()) module.name = config.name.trim();
+	if (typeof config.url === 'string') module.url = config.url;
+	if (config.updateRate !== undefined) module.updateRate = Math.max(5, Number(config.updateRate) || module.updateRate || 60);
+	return module;
+}
+
 function compileModule(module) {
-	const source = module.code.trim();
-	const helpers = Object.keys(moduleApi);
-	const values = Object.values(moduleApi);
+	const source = module.code;
+	const normalizedSource = source.trimStart();
+	const scopedApi = {
+		...moduleApi,
+		setModuleConfig: config => applyModuleConfig(module, config)
+	};
+	const helpers = Object.keys(scopedApi);
+	const values = Object.values(scopedApi);
 	let factory;
 
-	if (/^(async\s+)?function\b|^async\s*\(/.test(source) || source.startsWith('(')) {
+	if (/^(async\s+)?function\b|^async\s*\(/.test(normalizedSource) || normalizedSource.startsWith('(')) {
 		factory = new Function('module', ...helpers, `return (${source})(module, { ${helpers.join(', ')} });`);
 	} else {
 		factory = new Function('module', ...helpers, `return (async () => {\n${source}\n})();`);
@@ -657,7 +756,6 @@ async function proxyFetch(url, timeout = 10000) {
 
 function render() {
 	renderStatusCards();
-	renderModuleList();
 	scheduleAllModules();
 	setupFooter();
 }
@@ -706,55 +804,20 @@ function renderStatusCards() {
 		const actions = document.createElement('div');
 		actions.className = 'card-actions';
 		actions.append(
-			button('Refresh', 'icon-btn', () => updateStatus(module.id)),
-			button('Edit', 'icon-btn', () => openEditor(module.id))
+			button('Refresh', 'icon-btn', () => updateStatus(module.id, { resetProgress: true })),
+			button('Edit', 'icon-btn', () => openEditor(module.id)),
+			button('Export', 'icon-btn', () => exportModules([module])),
+			button('Delete', 'icon-btn danger', () => deleteModule(module.id))
 		);
 
 		header.append(titleBlock, actions);
 
 		const footer = document.createElement('div');
 		footer.className = 'status-footer';
-		footer.append(
-			pill(`Every ${module.updateRate}s`),
-			pill(module.lastUpdated ? `Updated ${module.lastUpdated}` : 'Waiting for first run')
-		);
+		renderModulePills(module, footer);
 
 		card.append(header, footer);
 		elements.statusContainer.appendChild(card);
-	});
-}
-
-function renderModuleList() {
-	elements.moduleCount.textContent = String(state.modules.length);
-	elements.moduleList.textContent = '';
-
-	state.modules.forEach(module => {
-		const row = document.createElement('div');
-		row.className = 'module-row';
-
-		const title = document.createElement('div');
-		title.className = 'module-row-title';
-		const name = document.createElement('span');
-		name.textContent = module.name;
-		const rate = document.createElement('span');
-		rate.className = 'mini-meta';
-		rate.textContent = `${module.updateRate}s`;
-		title.append(name, rate);
-
-		const meta = document.createElement('div');
-		meta.className = 'mini-meta';
-		meta.textContent = module.url || 'No URL configured';
-
-		const actions = document.createElement('div');
-		actions.className = 'library-actions';
-		actions.append(
-			button('Edit', 'icon-btn', () => openEditor(module.id)),
-			button('Export', 'icon-btn', () => exportModules([module])),
-			button('Delete', 'icon-btn', () => deleteModule(module.id))
-		);
-
-		row.append(title, meta, actions);
-		elements.moduleList.appendChild(row);
 	});
 }
 
@@ -767,18 +830,44 @@ function button(label, className, onClick) {
 	return node;
 }
 
-function pill(text) {
+function pill(config) {
+	const definition = typeof config === 'string' ? { text: config } : (config || {});
 	const node = document.createElement('span');
-	node.className = 'pill';
-	node.textContent = text;
+	node.className = ['pill', definition.className, definition.kind === 'refresh-timer' ? 'progress-pill' : '']
+		.filter(Boolean)
+		.join(' ');
+	if (definition.id) node.dataset.pillId = definition.id;
+	if (definition.kind) node.dataset.pillKind = definition.kind;
+	if (definition.period) node.dataset.period = String(definition.period);
+	if (definition.color) node.style.setProperty('--pill-color', definition.color);
+	if (definition.colorEnd) node.style.setProperty('--pill-color-end', definition.colorEnd);
+	if (definition.emptyColor) node.style.setProperty('--pill-empty-color', definition.emptyColor);
+	if (definition.borderColor) node.style.setProperty('--pill-border', definition.borderColor);
+	if (definition.title) node.title = definition.title;
+
+	const content = document.createElement('span');
+	content.className = 'pill-content';
+	content.textContent = definition.text || '';
+	node.appendChild(content);
 	return node;
 }
 
-async function updateStatus(moduleId) {
+function getModulePillDefinitions(module) {
+	return Array.isArray(module.lastPills) ? module.lastPills : [];
+}
+
+function renderModulePills(module, footer) {
+	footer.textContent = '';
+	getModulePillDefinitions(module).forEach(definition => footer.appendChild(pill(definition)));
+	updateRefreshPillProgress(module);
+}
+
+async function updateStatus(moduleId, options = {}) {
 	const module = state.modules.find(item => item.id === moduleId);
 	if (!module) return;
+	if (options.resetProgress || !module.refreshStartedAt) resetModuleRefreshProgress(module);
 
-	setModuleVisualState(module, { color: '#66b3ff', message: 'Loading...', details: '' });
+	setModuleVisualState(module, { color: '#66b3ff', message: 'Loading...', details: '', pills: module.lastPills || [] });
 
 	try {
 		const logic = compileModule(module);
@@ -795,12 +884,15 @@ async function updateStatus(moduleId) {
 
 function normalizeStatus(result) {
 	if (typeof result === 'string') {
-		return { color: '#00e676', message: result, details: '' };
+		return { color: '#00e676', message: result, details: '', pills: [] };
 	}
 	return {
 		color: result?.color || '#00e676',
 		message: result?.message || 'Online',
-		details: result?.details || ''
+		details: result?.details || '',
+		pills: Array.isArray(result?.pills) ? result.pills : [],
+		url: typeof result?.url === 'string' ? result.url : undefined,
+		updateRate: result?.updateRate
 	};
 }
 
@@ -808,7 +900,9 @@ function setModuleVisualState(module, status) {
 	module.lastColor = status.color;
 	module.lastMessage = status.message;
 	module.lastDetails = status.details;
+	if (status.url !== undefined || status.updateRate !== undefined) applyModuleConfig(module, status);
 	module.lastUpdated = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+	module.lastPills = Array.isArray(status.pills) ? status.pills : [];
 	updateCard(module);
 }
 
@@ -816,26 +910,38 @@ function updateCard(module) {
 	const card = document.getElementById(`status-${module.id}`);
 	if (!card) return;
 	card.style.setProperty('--card-color', module.lastColor || '#00e676');
-	card.querySelector('.status-name').style.color = module.lastColor || '#00e676';
+	const name = card.querySelector('.status-name');
+	name.style.color = module.lastColor || '#00e676';
+	name.textContent = module.name;
+	name.href = module.url || '#';
 	card.querySelector('.status').style.color = module.lastColor || '#00e676';
 	card.querySelector('.status').textContent = module.lastMessage || 'Loading...';
 	card.querySelector('.status-details').textContent = module.lastDetails || '';
 	const footer = card.querySelector('.status-footer');
-	footer.textContent = '';
-	footer.append(pill(`Every ${module.updateRate}s`), pill(module.lastUpdated ? `Updated ${module.lastUpdated}` : 'Waiting for first run'));
+	renderModulePills(module, footer);
 }
 
 function updateStatusForAllModules() {
-	state.modules.forEach(module => updateStatus(module.id));
+	state.modules.forEach(module => updateStatus(module.id, { resetProgress: true }));
 }
 
 function scheduleAllModules() {
-	state.timers.forEach(timer => clearInterval(timer));
+	state.timers.forEach(timer => clearTimeout(timer));
 	state.timers.clear();
-	state.modules.forEach(module => {
-		updateStatus(module.id);
-		state.timers.set(module.id, setInterval(() => updateStatus(module.id), module.updateRate * 1000));
-	});
+	state.modules.forEach(module => runScheduledModule(module.id));
+}
+
+async function runScheduledModule(moduleId) {
+	const module = state.modules.find(item => item.id === moduleId);
+	if (!module) return;
+	resetModuleRefreshProgress(module);
+	await updateStatus(moduleId);
+	const latest = state.modules.find(item => item.id === moduleId);
+	if (!latest) return;
+	const delay = Math.max(5, Number(latest.updateRate) || 60) * 1000;
+	latest.refreshStartedAt = performance.now();
+	latest.nextRefreshAt = latest.refreshStartedAt + delay;
+	state.timers.set(moduleId, setTimeout(() => runScheduledModule(moduleId), delay));
 }
 
 function openEditor(moduleId = null) {
@@ -843,9 +949,8 @@ function openEditor(moduleId = null) {
 	state.activeEditorId = module?.id || null;
 	elements.id.value = module?.id || '';
 	elements.name.value = module?.name || '';
-	elements.url.value = module?.url || '';
-	elements.rate.value = module?.updateRate || 60;
 	elements.code.value = module?.code || DEFAULT_MODULE_CODE;
+	updateCodeHighlight();
 	elements.editor.classList.add('open');
 	elements.name.focus();
 }
@@ -859,12 +964,13 @@ function closeEditor() {
 function getFormModule() {
 	const currentId = elements.id.value;
 	const name = elements.name.value.trim();
+	const existing = currentId ? state.modules.find(item => item.id === currentId) : null;
 	return {
 		id: currentId || createId(name),
 		name,
-		url: elements.url.value.trim(),
-		updateRate: Math.max(5, Number(elements.rate.value) || 60),
-		code: elements.code.value.trim()
+		url: existing?.url || '',
+		updateRate: existing?.updateRate || 60,
+		code: elements.code.value
 	};
 }
 
@@ -899,7 +1005,7 @@ function deleteModule(moduleId) {
 	if (!module) return;
 	if (!confirm(`Delete module "${module.name}"?`)) return;
 	state.modules = state.modules.filter(item => item.id !== moduleId);
-	if (state.timers.has(moduleId)) clearInterval(state.timers.get(moduleId));
+	if (state.timers.has(moduleId)) clearTimeout(state.timers.get(moduleId));
 	state.timers.delete(moduleId);
 	if (state.activeEditorId === moduleId) closeEditor();
 	saveModules();
@@ -961,6 +1067,74 @@ function toast(message) {
 	state.toastTimer = setTimeout(() => elements.toast.classList.remove('show'), 3200);
 }
 
+
+function resetModuleRefreshProgress(module) {
+	const periodMs = Math.max(5, Number(module.updateRate) || 60) * 1000;
+	module.refreshStartedAt = performance.now();
+	module.nextRefreshAt = module.refreshStartedAt + periodMs;
+}
+
+function updateRefreshPillProgress(module) {
+	const card = document.getElementById(`status-${module.id}`);
+	if (!card) return;
+	const now = performance.now();
+	card.querySelectorAll('.progress-pill[data-pill-kind="refresh-timer"]').forEach(node => {
+		const periodMs = Math.max(5, Number.parseFloat(node.dataset.period) || module.updateRate || 60) * 1000;
+		if (!module.refreshStartedAt || !module.nextRefreshAt) resetModuleRefreshProgress(module);
+		const duration = Math.max(1, module.nextRefreshAt - module.refreshStartedAt || periodMs);
+		const elapsed = Math.min(Math.max(now - module.refreshStartedAt, 0), duration);
+		node.style.setProperty('--pill-progress-position', `${(1 - (elapsed / duration)) * 100}%`);
+	});
+}
+
+function startPillProgressUpdater() {
+	function update() {
+		state.modules.forEach(updateRefreshPillProgress);
+		requestAnimationFrame(update);
+	}
+	update();
+}
+
+function escapeHtml(value) {
+	return value
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;');
+}
+
+function highlightJavaScript(source) {
+	const escaped = escapeHtml(source);
+	return escaped.replace(
+		/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(`(?:\\.|[^`])*`|'(?:\\.|[^'])*'|"(?:\\.|[^"])*")|\b(await|async|break|case|catch|class|const|continue|default|do|else|export|for|from|function|if|import|let|new|return|switch|throw|try|while|var|yield)\b|\b(true|false|null|undefined|NaN|Infinity)\b|\b(\d+(?:\.\d+)?)\b|\.([a-zA-Z_$][\w$]*)/g,
+		(match, comment, string, keyword, literal, number, property) => {
+			if (comment) return `<span class="code-token comment">${comment}</span>`;
+			if (string) return `<span class="code-token string">${string}</span>`;
+			if (keyword) return `<span class="code-token keyword">${keyword}</span>`;
+			if (literal) return `<span class="code-token literal">${literal}</span>`;
+			if (number) return `<span class="code-token number">${number}</span>`;
+			if (property) return `.<span class="code-token property">${property}</span>`;
+			return match;
+		}
+	);
+}
+
+function updateCodeHighlight() {
+	elements.codeHighlight.innerHTML = highlightJavaScript(elements.code.value) || '<br>';
+}
+
+function syncCodeHighlightScroll() {
+	elements.codeHighlight.scrollTop = elements.code.scrollTop;
+	elements.codeHighlight.scrollLeft = elements.code.scrollLeft;
+}
+
+function insertTextAtCodeCursor(text) {
+	const start = elements.code.selectionStart;
+	const end = elements.code.selectionEnd;
+	elements.code.value = `${elements.code.value.slice(0, start)}${text}${elements.code.value.slice(end)}`;
+	elements.code.selectionStart = elements.code.selectionEnd = start + text.length;
+	updateCodeHighlight();
+}
+
 function registerModule(module) {
 	const normalized = cloneModule(module);
 	const existingIndex = state.modules.findIndex(item => item.id === normalized.id);
@@ -981,8 +1155,19 @@ window.StatusFramework = {
 	getModules: () => state.modules.map(cloneModule),
 	exportModules: () => exportModules(state.modules),
 	refresh: updateStatusForAllModules,
-	helpers: moduleApi
+	helpers: moduleApi,
+	pillTemplates
 };
+
+
+elements.code.addEventListener('input', updateCodeHighlight);
+elements.code.addEventListener('scroll', syncCodeHighlightScroll);
+elements.code.addEventListener('keydown', event => {
+	if (event.key === 'Tab') {
+		event.preventDefault();
+		insertTextAtCodeCursor('\t');
+	}
+});
 
 document.getElementById('add-module-button').addEventListener('click', () => openEditor());
 document.getElementById('refresh-all-button').addEventListener('click', updateStatusForAllModules);
@@ -1018,6 +1203,7 @@ document.addEventListener('keydown', e => {
 
 state.modules = loadModules();
 render();
+startPillProgressUpdater();
 </script>
 </body>
 </html>
