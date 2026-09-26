@@ -734,7 +734,7 @@ function compileModule(module) {
 
 async function proxyFetch(url, timeout = 10000) {
 	const proxies = [
-		u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`
+		u => `https://cors.olegbeznogy.workers.dev/?${encodeURIComponent(u)}`
 	];
 
 	let lastError;
